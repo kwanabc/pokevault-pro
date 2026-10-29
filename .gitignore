@@ -1,0 +1,5 @@
+Thumbs.db
+.DS_Store
+# 真實資料的匯出檔，絕對不要上傳到公開網站
+*.json
+*.csv

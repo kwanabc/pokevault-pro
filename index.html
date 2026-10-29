@@ -1,0 +1,2740 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéVault Pro | Pokémon 卡牌買賣・送評・資金管理系統</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .pokeball-gradient {
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #3b82f6 100%);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- Top Navigation & Global Controls -->
+  <header class="sticky top-0 z-30 glass-card border-b border-slate-800/80 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl pokeball-gradient p-0.5 shadow-lg shadow-amber-500/10 flex items-center justify-center">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center relative overflow-hidden">
+            <div class="w-5 h-5 rounded-full border-2 border-amber-400 flex items-center justify-center">
+              <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-extrabold tracking-tight text-white">PokéVault <span class="text-amber-400">Pro</span></h1>
+            <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">TCG 投資與送評系統</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">成本追蹤・PSA/BGS/CGC/ARS 送評核算・買賣差價・資金池管理</p>
+        </div>
+      </div>
+
+      <!-- Global Currency & Rate Switcher + Quick Capital -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <!-- Exchange Rate Input -->
+        <div class="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs">
+          <span class="text-slate-400 mr-1.5">匯率 1 USD =</span>
+          <input id="globalRateInput" type="number" step="0.01" min="1" max="20"
+            class="w-14 bg-slate-800 text-amber-300 font-semibold text-center rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-400"
+            value="7.80" title="隨時調整 USD 對 HKD 匯率" />
+          <span class="text-slate-400 ml-1">HKD</span>
+        </div>
+
+        <!-- Instant Currency Toggle -->
+        <div class="inline-flex rounded-lg bg-slate-900 p-1 border border-slate-700/80" role="group">
+          <button id="btnCurrHKD" type="button"
+            class="px-3 py-1 text-xs font-bold rounded-md transition-all bg-amber-500 text-slate-950 shadow">
+            HKD $
+          </button>
+          <button id="btnCurrUSD" type="button"
+            class="px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-300 hover:text-white">
+            USD $
+          </button>
+        </div>
+
+        <!-- Quick Add Card CTA -->
+        <button id="btnTopAddCard" type="button"
+          class="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-lg shadow-md shadow-amber-500/10 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          <span>新增入庫卡牌</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2 overflow-x-auto">
+      <nav class="flex items-center gap-1 sm:gap-2" aria-label="Tabs">
+        <button type="button" data-tab="dashboard" class="nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 bg-slate-800 text-amber-400 border border-amber-500/30">
+          <span>📊 總覽與資金池</span>
+        </button>
+        <button type="button" data-tab="inventory" class="nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-300 hover:bg-slate-800/60">
+          <span>🃏 卡牌庫存與買賣</span>
+          <span id="badgeInventoryCount" class="px-1.5 py-0.5 text-[11px] rounded-full bg-slate-700 text-slate-200">0</span>
+        </button>
+        <button type="button" data-tab="grading" class="nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-300 hover:bg-slate-800/60">
+          <span>🏆 送評批次管理</span>
+          <span id="badgeGradingCount" class="px-1.5 py-0.5 text-[11px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">0</span>
+        </button>
+        <button type="button" data-tab="calculator" class="nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-300 hover:bg-slate-800/60">
+          <span>🧮 送評與差價試算器</span>
+        </button>
+        <button type="button" data-tab="capital" class="nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-300 hover:bg-slate-800/60">
+          <span>💰 資金帳本與備份</span>
+        </button>
+      </nav>
+
+      <div class="hidden md:flex items-center gap-2 text-xs text-slate-400">
+        <span>可用現金：</span>
+        <span id="headerCashAvailable" class="font-bold text-emerald-400">HK$ 0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+    <!-- ==================== TAB 1: DASHBOARD ==================== -->
+    <section id="tab-dashboard" class="tab-panel space-y-6">
+      <!-- Editable Starting Capital Banner -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5 border border-amber-500/25 bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/20 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 class="text-sm sm:text-base font-bold text-white">資金池控制台（即時轉換 <span class="curr-label text-amber-400">HKD</span>）</h2>
+          </div>
+          <p class="text-xs text-slate-400">可隨時修改你的起始本金或記錄資金注資/提領。所有買卡、送評費及賣卡回款均會自動連動計算最新可用現金。</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <div class="flex items-center bg-slate-950/90 border border-slate-700 rounded-xl px-3 py-2 gap-2 flex-1 sm:flex-initial">
+            <span class="text-xs text-slate-400 whitespace-nowrap">起始資金 (<span class="curr-label">HKD</span>):</span>
+            <input id="quickStartingCapitalInput" type="number" step="100"
+              class="w-28 sm:w-32 bg-slate-800/90 text-white font-bold text-sm px-2.5 py-1 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-400"
+              value="50000" />
+            <button id="btnSaveStartingCapital" type="button"
+              class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition whitespace-nowrap">
+              更新本金
+            </button>
+          </div>
+          <button id="btnQuickCapitalModal" type="button"
+            class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition whitespace-nowrap">
+            + 注資 / 提領記錄
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Total Capital Pool / Net Worth -->
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-amber-400">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>總資產淨值 (含市值預估)</span>
+            <span class="text-amber-400 font-semibold">Net Asset</span>
+          </div>
+          <div id="kpiTotalAsset" class="text-xl sm:text-2xl font-extrabold text-white mt-2">HK$ 0</div>
+          <div id="kpiStartingCapSub" class="text-[11px] text-slate-400 mt-1">總投入本金: HK$ 0</div>
+        </div>
+
+        <!-- Available Cash -->
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-emerald-400">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>目前可用現金流</span>
+            <span class="text-emerald-400 font-semibold">Cash Flow</span>
+          </div>
+          <div id="kpiAvailableCash" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-2">HK$ 0</div>
+          <div id="kpiCashRatioSub" class="text-[11px] text-slate-400 mt-1">佔總資金比例: 0%</div>
+        </div>
+
+        <!-- Active Inventory Landed Cost -->
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-blue-400">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>壓貨總成本 (未售+送評中)</span>
+            <span class="text-blue-400 font-semibold">Inventory Cost</span>
+          </div>
+          <div id="kpiInventoryCost" class="text-xl sm:text-2xl font-extrabold text-white mt-2">HK$ 0</div>
+          <div id="kpiInventoryBreakdown" class="text-[11px] text-slate-400 mt-1">裸卡 0 張・送評中 0 張・持磚 0 張</div>
+        </div>
+
+        <!-- Unrealized Value & Potential Profit -->
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-purple-400">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>持倉預估市值 / 潛在毛利</span>
+            <span class="text-purple-400 font-semibold">Est. Market</span>
+          </div>
+          <div id="kpiMarketValue" class="text-xl sm:text-2xl font-extrabold text-white mt-2">HK$ 0</div>
+          <div id="kpiUnrealizedProfit" class="text-[11px] text-purple-300 mt-1">潛在未實現差價: +HK$ 0</div>
+        </div>
+
+        <!-- Realized Net Profit & ROI -->
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-rose-400">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>已實現總淨利 (扣除手續費/評費)</span>
+            <span class="text-rose-400 font-semibold">Realized P&L</span>
+          </div>
+          <div id="kpiRealizedProfit" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-2">+HK$ 0</div>
+          <div id="kpiRealizedROI" class="text-[11px] text-slate-300 mt-1">平均已結算 ROI: 0.0% (0 筆成交)</div>
+        </div>
+      </div>
+
+      <!-- Charts & Pipeline Summary -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Capital & Inventory Allocation Chart -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center justify-between">
+              <span>資金配置與庫存結構</span>
+              <span class="text-xs font-normal text-slate-400">現金 vs 裸卡 vs 送評 vs 鑑定磚</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">控制壓貨水位，避免送評週期過長導致資金斷鏈</p>
+          </div>
+          <div class="relative h-64 mt-4">
+            <canvas id="chartCapitalAllocation"></canvas>
+          </div>
+        </div>
+
+        <!-- Profit By Strategy / Channel Chart -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center justify-between">
+              <span>獲利來源與成本結構分析</span>
+              <span class="text-xs font-normal text-slate-400">裸卡快炒 vs 送評賣出</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">比較直接買賣差價與送評增值後的淨利貢獻</p>
+          </div>
+          <div class="relative h-64 mt-4">
+            <canvas id="chartStrategyPerformance"></canvas>
+          </div>
+        </div>
+
+        <!-- Grading & Action Pipeline -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center justify-between">
+              <span>卡牌流轉狀態管道 (Pipeline)</span>
+              <button type="button" data-goto-tab="inventory" class="text-xs text-amber-400 hover:underline">查看全部 →</button>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">即時追蹤每張卡處於哪個獲利階段</p>
+          </div>
+
+          <div class="space-y-3 flex-1 flex flex-col justify-center">
+            <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center font-bold text-sm">1</span>
+                <div>
+                  <div class="text-xs font-bold text-white">在庫裸卡 (Raw In-Stock)</div>
+                  <div id="pipeRawCost" class="text-[11px] text-slate-400">總成本: HK$ 0</div>
+                </div>
+              </div>
+              <span id="pipeRawCount" class="text-sm font-extrabold text-slate-200">0 張</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900/90 border border-blue-500/20 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-sm">2</span>
+                <div>
+                  <div class="text-xs font-bold text-blue-300">送評鑑定中 (At PSA/BGS/CGC/ARS)</div>
+                  <div id="pipeGradingCost" class="text-[11px] text-slate-400">含評費成本: HK$ 0</div>
+                </div>
+              </div>
+              <span id="pipeGradingCount" class="text-sm font-extrabold text-blue-300">0 張</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900/90 border border-amber-500/20 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-sm">3</span>
+                <div>
+                  <div class="text-xs font-bold text-amber-300">在庫鑑定磚 (Graded Slabs Ready)</div>
+                  <div id="pipeGradedCost" class="text-[11px] text-slate-400">總落地成本: HK$ 0</div>
+                </div>
+              </div>
+              <span id="pipeGradedCount" class="text-sm font-extrabold text-amber-300">0 張</span>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-900/90 border border-emerald-500/20 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-sm">4</span>
+                <div>
+                  <div class="text-xs font-bold text-emerald-300">已售出結算 (Sold & Realized)</div>
+                  <div id="pipeSoldRevenue" class="text-[11px] text-slate-400">總銷售額: HK$ 0</div>
+                </div>
+              </div>
+              <span id="pipeSoldCount" class="text-sm font-extrabold text-emerald-300">0 張</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent High-Impact Cards Table Preview -->
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-sm font-bold text-white">最新卡牌動態與損益明細</h3>
+            <p class="text-xs text-slate-400">自動匯總買入價、運費、送評費、加價(Upcharge)與平台手續費</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" data-goto-tab="grading" class="px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 border border-blue-500/30 text-xs font-semibold hover:bg-blue-500/25 transition">
+              管理送評批次
+            </button>
+            <button type="button" data-goto-tab="inventory" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold hover:bg-slate-700 transition">
+              進入完整庫存表
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase">
+                <th class="py-2.5 px-3">卡牌名稱 / 編號</th>
+                <th class="py-2.5 px-3">狀態 / 評級</th>
+                <th class="py-2.5 px-3 text-right">購入原價</th>
+                <th class="py-2.5 px-3 text-right">送評+雜費</th>
+                <th class="py-2.5 px-3 text-right">總落地成本</th>
+                <th class="py-2.5 px-3 text-right">預估市值 / 售價</th>
+                <th class="py-2.5 px-3 text-right">淨利潤 (ROI)</th>
+                <th class="py-2.5 px-3 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="dashboardRecentTableBody" class="divide-y divide-slate-800/60"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: INVENTORY & SALES ==================== -->
+    <section id="tab-inventory" class="tab-panel hidden space-y-5">
+      <!-- Filter & Action Bar -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+          <!-- Search -->
+          <div class="relative flex-1 min-w-[200px]">
+            <input id="invSearchInput" type="text" placeholder="搜尋卡名、編號 (如 SV2a 201)、Cert #、備註..."
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400" />
+            <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+          </div>
+
+          <!-- Status Filter -->
+          <select id="invStatusFilter" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
+            <option value="ALL">所有狀態 (All)</option>
+            <option value="RAW">在庫裸卡 (Raw)</option>
+            <option value="GRADING">送評鑑定中 (Grading)</option>
+            <option value="GRADED">在庫鑑定磚 (Graded Slab)</option>
+            <option value="SOLD">已售出結算 (Sold)</option>
+          </select>
+
+          <!-- Language Filter -->
+          <select id="invLangFilter" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
+            <option value="ALL">所有語言</option>
+            <option value="JP">日版 (JP)</option>
+            <option value="TC">繁中版 (TC)</option>
+            <option value="EN">美版 (EN)</option>
+            <option value="OTHER">其他版本</option>
+          </select>
+
+          <!-- Company Filter -->
+          <select id="invCompanyFilter" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-400">
+            <option value="ALL">所有評級機構</option>
+            <option value="NONE">未送評 (Raw)</option>
+            <option value="PSA">PSA</option>
+            <option value="BGS">BGS</option>
+            <option value="CGC">CGC</option>
+            <option value="ARS">ARS</option>
+          </select>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnInvAddCard" type="button"
+            class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5">
+            <span>+ 新增買入卡牌</span>
+          </button>
+          <button id="btnInvCreateBatch" type="button"
+            class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition flex items-center gap-1.5">
+            <span>📦 勾選裸卡建立送評單</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Inventory Table -->
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase">
+                <th class="py-3 px-3 w-8 text-center">
+                  <input id="chkSelectAllRaw" type="checkbox" class="rounded bg-slate-800 border-slate-600 text-amber-500 focus:ring-0" title="全選在庫裸卡以建立送評批次" />
+                </th>
+                <th class="py-3 px-3">卡牌資訊</th>
+                <th class="py-3 px-3">語言 / 稀有度</th>
+                <th class="py-3 px-3">目前狀態 / 評級</th>
+                <th class="py-3 px-3 text-right">買入成本 (含運)</th>
+                <th class="py-3 px-3 text-right">送評費 (含分攤/加價)</th>
+                <th class="py-3 px-3 text-right">總落地成本</th>
+                <th class="py-3 px-3 text-right">預估市值 / 成交價</th>
+                <th class="py-3 px-3 text-right">手續費+賣出運費</th>
+                <th class="py-3 px-3 text-right">淨利潤 / ROI</th>
+                <th class="py-3 px-3 text-center">操作功能</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-800/70"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: GRADING BATCHES ==================== -->
+    <section id="tab-grading" class="tab-panel hidden space-y-6">
+      <!-- Header & Explanation -->
+      <div class="glass-card rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span>🏆 送評批次與鑑定成本管理 (PSA / BGS / CGC / ARS)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            支援「自己直寄」或「代送店模式」。輸入每張基本評費、整批來回國際運費與保險費後，系統會**自動把整批運費平均分攤到該批次的每張卡牌成本中**，亦支援高價卡出分加價 (Upcharge) 獨立輸入。
+          </p>
+        </div>
+        <button id="btnOpenBatchModal" type="button"
+          class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 text-white font-bold text-xs shadow-lg shadow-blue-500/15 transition whitespace-nowrap">
+          + 建立新送評批次
+        </button>
+      </div>
+
+      <!-- Grading Batches Container -->
+      <div id="gradingBatchesContainer" class="space-y-4"></div>
+    </section>
+
+    <!-- ==================== TAB 4: EV & GRADING CALCULATOR ==================== -->
+    <section id="tab-calculator" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Calculator Inputs -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-5 space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-base font-bold text-white">🧮 買卡送評 vs 裸卡差價 決策試算器</h2>
+            <p class="text-xs text-slate-400 mt-1">買入前先輸入各項成本與預估售價，自動計算「送評期望值 (EV)」、「損益兩平價」與「裸卡直賣對比」</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2 sm:col-span-1">
+              <label class="block text-xs text-slate-400 mb-1">試算輸入幣別</label>
+              <select id="calcCurrency" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-400">
+                <option value="HKD">HKD (港幣 $)</option>
+                <option value="USD">USD (美元 $)</option>
+              </select>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <label class="block text-xs text-slate-400 mb-1">預設銷售平台手續費率</label>
+              <select id="calcPlatformPreset" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200">
+                <option value="0">Carousell / 面交 (0%)</option>
+                <option value="13.5" selected>eBay 標準 (13.5%)</option>
+                <option value="9.5">SNKRDUNK (9.5%)</option>
+                <option value="6">PWCC / Goldin / 拍賣 (6%)</option>
+                <option value="10">Mercari / 其他 (10%)</option>
+                <option value="custom">自訂手續費 %</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">裸卡買入價</label>
+              <input id="calcBuyPrice" type="number" step="1" value="1200"
+                class="calc-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">買入運費 / 代購費</label>
+              <input id="calcBuyShipping" type="number" step="1" value="40"
+                class="calc-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+            </div>
+          </div>
+
+          <!-- Grading presets -->
+          <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-blue-300">送評成本設定 (PSA / BGS / CGC / ARS)</span>
+              <select id="calcGradingPreset" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-200">
+                <option value="150">PSA Value 代送 (約 HK$150)</option>
+                <option value="320">PSA Regular (約 HK$320)</option>
+                <option value="280">BGS 標準含小分 (約 HK$280)</option>
+                <option value="130">CGC Bulk (約 HK$130)</option>
+                <option value="260">ARS 日本鑑定 (約 HK$260)</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">基本評費</label>
+                <input id="calcGradeFee" type="number" step="1" value="150"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">分攤運費/保護殼</label>
+                <input id="calcGradeShip" type="number" step="1" value="30"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">預估加價 Upcharge</label>
+                <input id="calcUpcharge" type="number" step="1" value="0"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Expected Sale Prices & Probabilities -->
+          <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+            <span class="text-xs font-bold text-amber-300 block">各情境預估賣出價與出分機率</span>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">裸卡直接轉賣價 (Raw Flip)</label>
+                <input id="calcRawSellPrice" type="number" step="1" value="1550"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">銷售手續費 (%) + 寄出運費</label>
+                <div class="flex gap-1.5">
+                  <input id="calcFeePct" type="number" step="0.1" value="13.5"
+                    class="calc-input w-1/2 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-amber-300" title="平台手續費 %" />
+                  <input id="calcSellShip" type="number" step="1" value="35"
+                    class="calc-input w-1/2 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white" title="賣出寄送運費" />
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-1">
+              <div>
+                <label class="block text-[11px] text-emerald-400 mb-1">10分 預估售價</label>
+                <input id="calcPrice10" type="number" step="1" value="2800"
+                  class="calc-input w-full bg-slate-800 border border-emerald-500/40 rounded-lg px-2.5 py-1.5 text-xs font-bold text-emerald-300" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-amber-300 mb-1">9分 預估售價</label>
+                <input id="calcPrice9" type="number" step="1" value="1350"
+                  class="calc-input w-full bg-slate-800 border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-200" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-rose-400 mb-1">8分或以下售價</label>
+                <input id="calcPrice8" type="number" step="1" value="950"
+                  class="calc-input w-full bg-slate-800 border border-rose-500/40 rounded-lg px-2.5 py-1.5 text-xs font-bold text-rose-300" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">10分 機率 (%)</label>
+                <input id="calcProb10" type="number" step="1" min="0" max="100" value="70"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">9分 機率 (%)</label>
+                <input id="calcProb9" type="number" step="1" min="0" max="100" value="25"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">≤8分 機率 (%)</label>
+                <input id="calcProb8" type="number" step="1" min="0" max="100" value="5"
+                  class="calc-input w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculator Results -->
+        <div class="lg:col-span-7 space-y-4">
+          <!-- Decision Recommendation Banner -->
+          <div id="calcDecisionBanner" class="glass-card rounded-2xl p-5 border-l-4 border-l-emerald-400">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span id="calcRecommendationTag" class="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">建議策略：送評增值</span>
+                <h3 id="calcDecisionTitle" class="text-lg font-extrabold text-white mt-1.5">送評期望淨利顯著高於裸卡直賣</h3>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-400">送評期望淨利 (Expected Profit)</div>
+                <div id="calcExpectedProfitDisplay" class="text-2xl font-extrabold text-emerald-400">+HK$ 0</div>
+                <div id="calcExpectedROIDisplay" class="text-xs text-slate-300">期望 ROI: +0.0%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comparison Matrix -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
+              <div class="text-xs text-slate-400">裸卡持有成本 vs 送評後總落地成本</div>
+              <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xs text-slate-300">裸卡成本 (含買入運費):</span>
+                <span id="calcResRawCost" class="text-sm font-bold text-white">HK$ 1,240</span>
+              </div>
+              <div class="mt-1.5 flex items-baseline justify-between">
+                <span class="text-xs text-blue-300">送評後總成本 (含評費+加價):</span>
+                <span id="calcResGradedCost" class="text-base font-extrabold text-blue-300">HK$ 1,420</span>
+              </div>
+              <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-baseline justify-between">
+                <span class="text-xs text-amber-300">送評後損益兩平最低售價:</span>
+                <span id="calcResBreakeven" class="text-sm font-extrabold text-amber-300">HK$ 1,682</span>
+              </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
+              <div class="text-xs text-slate-400">獲得 10分 最低需幾率才勝過裸卡直賣？</div>
+              <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-xs text-slate-300">裸卡直接賣出淨利:</span>
+                <span id="calcResRawFlipProfit" class="text-sm font-bold text-emerald-400">+HK$ 66</span>
+              </div>
+              <div class="mt-1.5 flex items-baseline justify-between">
+                <span class="text-xs text-slate-300">獲得 10分 單張淨利:</span>
+                <span id="calcResGem10Profit" class="text-base font-extrabold text-emerald-400">+HK$ 967</span>
+              </div>
+              <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-baseline justify-between">
+                <span class="text-xs text-purple-300">最低 10分 損益門檻率 (Gem Rate):</span>
+                <span id="calcResMinGemRate" class="text-sm font-extrabold text-purple-300">31.5%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scenario Table -->
+          <div class="glass-card rounded-2xl p-5">
+            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">各出分情境損益明細表 (同時顯示 HKD & USD)</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400">
+                    <th class="py-2 px-2">出分情境</th>
+                    <th class="py-2 px-2 text-right">總成本</th>
+                    <th class="py-2 px-2 text-right">預估成交價</th>
+                    <th class="py-2 px-2 text-right">手續費+運費</th>
+                    <th class="py-2 px-2 text-right">實收淨額</th>
+                    <th class="py-2 px-2 text-right">淨利潤 (HKD / USD)</th>
+                    <th class="py-2 px-2 text-right">投資報酬率 ROI</th>
+                  </tr>
+                </thead>
+                <tbody id="calcScenarioTableBody" class="divide-y divide-slate-800/70"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: CAPITAL LEDGER & BACKUP ==================== -->
+    <section id="tab-capital" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Capital Settings & Manual Entry -->
+        <div class="lg:col-span-5 space-y-5">
+          <div class="glass-card rounded-2xl p-5 space-y-4">
+            <h2 class="text-base font-bold text-white">💰 起始資金與資金池設定</h2>
+            <p class="text-xs text-slate-400">設定你的初始營運本金，並隨時新增注資（加碼本金）、提領獲利或其他雜項支出（如卡夾、保護殼、卡展攤位費）。</p>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+              <label class="block text-xs font-semibold text-slate-300">起始營運資金 (以目前顯示幣別 <span class="curr-label text-amber-400">HKD</span> 輸入)</label>
+              <div class="flex gap-2">
+                <input id="ledgerStartingCapInput" type="number" step="100"
+                  class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white" />
+                <button id="btnLedgerSaveStartingCap" type="button"
+                  class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition">
+                  儲存設定
+                </button>
+              </div>
+            </div>
+
+            <!-- Add Capital Transaction Form -->
+            <form id="formAddCapitalTx" class="space-y-3 pt-2 border-t border-slate-800">
+              <h3 class="text-xs font-bold text-slate-300 uppercase">新增手動資金變動記錄</h3>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">變動類型</label>
+                  <select id="capTxType" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                    <option value="DEPOSIT">➕ 資金注資 (Deposit)</option>
+                    <option value="WITHDRAW">➖ 提領資金/分紅 (Withdraw)</option>
+                    <option value="EXPENSE">🧾 耗材/卡展/雜項支出 (Expense)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">日期</label>
+                  <input id="capTxDate" type="date" required
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">幣別</label>
+                  <select id="capTxCurr" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-amber-400">
+                    <option value="HKD">HKD</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-[11px] text-slate-400 mb-1">金額</label>
+                  <input id="capTxAmount" type="number" step="0.01" min="0.01" required placeholder="例如 5000"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">備註說明</label>
+                <input id="capTxNote" type="text" required placeholder="例如：補充 PSA 卡夾與磁性磚、日本秋葉原採購備用金..."
+                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+              </div>
+              <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+                記錄至資金帳本
+              </button>
+            </form>
+          </div>
+
+          <!-- Data Export / Import / Reset -->
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <h3 class="text-sm font-bold text-white">💾 資料備份與匯出 (CSV / JSON)</h3>
+            <p class="text-xs text-slate-400">所有資料均即時自動儲存於瀏覽器本機。你可隨時匯出完整 Excel CSV 報表或 JSON 備份檔。</p>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button id="btnExportCSV" type="button" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">
+                📥 匯出卡牌損益 CSV
+              </button>
+              <button id="btnExportJSON" type="button" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">
+                📦 匯出完整系統備份 (.json)
+              </button>
+              <label class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-semibold transition cursor-pointer">
+                📂 匯入備份檔
+                <input id="inputImportJSON" type="file" accept=".json" class="hidden" />
+              </label>
+              <button id="btnResetDemoData" type="button" class="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold transition">
+                🔄 重置範例資料
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unified Cashflow Ledger Table -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-5 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-white">📜 全域現金流與資金流水帳 (Auto + Manual Ledger)</h3>
+              <p class="text-xs text-slate-400">自動整合「起始本金」、「買入卡牌支出」、「送評費支出」、「賣卡淨回款」與「手動注資/提領」</p>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto flex-1">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 uppercase">
+                  <th class="py-2.5 px-3">日期</th>
+                  <th class="py-2.5 px-3">項目類型</th>
+                  <th class="py-2.5 px-3">明細內容</th>
+                  <th class="py-2.5 px-3 text-right">資金變動 (<span class="curr-label">HKD</span>)</th>
+                  <th class="py-2.5 px-3 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="capitalLedgerTableBody" class="divide-y divide-slate-800/60"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL 1: ADD / EDIT CARD ==================== -->
+  <div id="modalCard" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-card rounded-2xl max-w-2xl w-full p-5 sm:p-6 border border-slate-700 shadow-2xl space-y-4 my-8">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="modalCardTitle" class="text-base font-bold text-white">新增買入卡牌</h3>
+        <button id="btnCloseCardModal" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">✕</button>
+      </div>
+
+      <form id="formCard" class="space-y-4 text-xs">
+        <input type="hidden" id="cardId" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-slate-400 mb-1">卡牌名稱 (Card Name) *</label>
+            <input id="cardName" type="text" required placeholder="例如：Pikachu ex SAR / 噴火龍 ex SAR"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">系列與卡號 (Set & Number) *</label>
+            <input id="cardSetNum" type="text" required placeholder="例如：SV8 132/106"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">語言版本</label>
+            <select id="cardLang" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              <option value="JP">日版 (JP)</option>
+              <option value="TC">繁中版 (TC)</option>
+              <option value="EN">美版 (EN)</option>
+              <option value="OTHER">其他</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">稀有度</label>
+            <input id="cardRarity" type="text" value="SAR" placeholder="SAR / AR / PROMO / SR"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">購入日期</label>
+            <input id="cardBuyDate" type="date" required
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">入手管道</label>
+            <input id="cardSource" type="text" placeholder="Mercari / 卡鋪 / Carousell"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+        </div>
+
+        <!-- Cost Section -->
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-400">購入成本與預估市值 (可選 HKD 或 USD 輸入)</span>
+            <select id="cardInputCurr" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 font-bold text-amber-300">
+              <option value="HKD">以 HKD 輸入</option>
+              <option value="USD">以 USD 輸入</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">買入原價 *</label>
+              <input id="cardBuyPrice" type="number" step="0.01" min="0" required placeholder="0.00"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">買入運費 / 代購費</label>
+              <input id="cardBuyShipping" type="number" step="0.01" min="0" value="0"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">目前預估市值 (Est. Value)</label>
+              <input id="cardMarketValue" type="number" step="0.01" min="0" placeholder="選填，預設同成本"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-purple-300 font-semibold" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Status & Grading Section -->
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <span class="font-bold text-blue-300 block">卡牌狀態與送評成本 (如買入已是磚或個別送評可直接填寫)</span>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">目前狀態</label>
+              <select id="cardStatus" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
+                <option value="RAW">在庫裸卡 (Raw)</option>
+                <option value="GRADING">送評鑑定中 (Grading)</option>
+                <option value="GRADED">在庫鑑定磚 (Graded)</option>
+                <option value="SOLD">已售出 (Sold)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">鑑定機構</label>
+              <select id="cardGradeCompany" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                <option value="">無 (裸卡 Raw)</option>
+                <option value="PSA">PSA</option>
+                <option value="BGS">BGS</option>
+                <option value="CGC">CGC</option>
+                <option value="ARS">ARS</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">評級分數 (Grade)</label>
+              <input id="cardGradeScore" type="text" placeholder="例如：10 / 9.5 / Black 10"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-amber-300 font-bold" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">認證編號 (Cert #)</label>
+              <input id="cardCertNum" type="text" placeholder="例如：89341205"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div>
+              <label class="block text-slate-400 mb-1">送評費 (含分攤運費)</label>
+              <input id="cardGradingCost" type="number" step="0.01" min="0" value="0"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">高價卡加價 (Upcharge)</label>
+              <input id="cardUpcharge" type="number" step="0.01" min="0" value="0"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">卡況備註 (Centering/白邊)</label>
+              <input id="cardNotes" type="text" placeholder="例如：置中極佳、保底 PSA 10 候選"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button id="btnCancelCardModal" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">儲存卡牌資料</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: SELL / SETTLE CARD ==================== -->
+  <div id="modalSell" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-5 sm:p-6 border border-emerald-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">💰 記錄卡牌售出與損益結算</h3>
+          <p id="sellCardSubtitle" class="text-xs text-amber-300 mt-0.5"></p>
+        </div>
+        <button id="btnCloseSellModal" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">✕</button>
+      </div>
+
+      <form id="formSell" class="space-y-4 text-xs">
+        <input type="hidden" id="sellCardId" />
+
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span class="text-slate-400">該卡總落地成本 (買價+運費+送評+加價):</span>
+          <span id="sellModalLandedCost" class="text-sm font-extrabold text-white">HK$ 0</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">售出輸入幣別</label>
+            <select id="sellInputCurr" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 font-bold text-amber-400">
+              <option value="HKD">HKD (港幣 $)</option>
+              <option value="USD">USD (美元 $)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">售出日期 *</label>
+            <input id="sellDate" type="date" required
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">銷售平台 / 管道</label>
+            <select id="sellPlatform" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              <option value="Carousell / 面交" data-fee="0">Carousell / 面交 (0%)</option>
+              <option value="eBay" data-fee="13.5">eBay (預設 13.5%)</option>
+              <option value="SNKRDUNK" data-fee="9.5">SNKRDUNK (預設 9.5%)</option>
+              <option value="PWCC / Goldin" data-fee="6">PWCC / Goldin (預設 6%)</option>
+              <option value="卡展 / 卡鋪收購" data-fee="0">卡展 / 卡鋪收購 (0%)</option>
+              <option value="Mercari" data-fee="10">Mercari (預設 10%)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">成交總售價 (Gross Sale) *</label>
+            <input id="sellGrossPrice" type="number" step="0.01" min="0" required
+              class="w-full bg-slate-900 border border-emerald-500/50 rounded-xl px-3 py-2 text-sm font-extrabold text-emerald-300" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-slate-400 mb-1">手續費率 (%)</label>
+            <input id="sellFeePct" type="number" step="0.1" min="0" value="0"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">平台手續費金額</label>
+            <input id="sellFeeAmt" type="number" step="0.01" min="0" value="0"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-rose-300 font-semibold" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">賣方負擔運費</label>
+            <input id="sellShipCost" type="number" step="0.01" min="0" value="0"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-white" />
+          </div>
+        </div>
+
+        <!-- Live Profit Preview -->
+        <div class="p-3.5 rounded-xl bg-slate-900/95 border border-slate-800 space-y-1.5">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-400">扣除手續費與運費後實收 (Net Payout):</span>
+            <span id="sellPreviewNetPayout" class="font-bold text-white">HK$ 0</span>
+          </div>
+          <div class="flex justify-between text-sm pt-1 border-t border-slate-800">
+            <span class="text-slate-300 font-semibold">本筆交易淨利潤 (Net Profit / ROI):</span>
+            <span id="sellPreviewNetProfit" class="font-extrabold text-emerald-400">+HK$ 0 (0%)</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button id="btnCancelSellModal" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold">確認售出並入帳</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: CREATE GRADING BATCH ==================== -->
+  <div id="modalBatch" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-card rounded-2xl max-w-2xl w-full p-5 sm:p-6 border border-blue-500/30 shadow-2xl space-y-4 my-8">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">📦 建立送評鑑定批次 (PSA / BGS / CGC / ARS)</h3>
+          <p class="text-xs text-slate-400 mt-0.5">選擇鑑定機構並輸入費用，系統將自動為選取的每張裸卡累加送評費與分攤運費</p>
+        </div>
+        <button id="btnCloseBatchModal" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">✕</button>
+      </div>
+
+      <form id="formBatch" class="space-y-4 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">鑑定機構 *</label>
+            <select id="batchCompany" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold">
+              <option value="PSA">PSA (Professional Sports Authenticator)</option>
+              <option value="BGS">BGS (Beckett Grading Services)</option>
+              <option value="CGC">CGC Cards</option>
+              <option value="ARS">ARS (Arsales Japanese Grading)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">送評模式 / 服務等級 *</label>
+            <input id="batchTier" type="text" required value="Value Bulk (代送店)" placeholder="例如：Value Bulk / Regular / 直寄"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">送出日期 *</label>
+            <input id="batchDate" type="date" required
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-blue-300">送評費用設定 (自動分攤至每張卡)</span>
+            <select id="batchCurr" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 font-bold text-amber-300">
+              <option value="HKD">以 HKD 輸入</option>
+              <option value="USD">以 USD 輸入</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">每張卡基本評費 *</label>
+              <input id="batchFeePerCard" type="number" step="0.01" min="0" required value="150"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">整批總運費 + 保險費</label>
+              <input id="batchTotalShipping" type="number" step="0.01" min="0" value="120"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">代送服務費 / 雜費 (整批)</label>
+              <input id="batchMiscFee" type="number" step="0.01" min="0" value="0"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Select Raw Cards -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-slate-300 font-bold">勾選要納入本批送評的「在庫裸卡」:</label>
+            <span id="batchSelectedCountText" class="text-amber-400 font-semibold">已選 0 張</span>
+          </div>
+          <div id="batchRawCardsChecklist" class="max-h-48 overflow-y-auto rounded-xl bg-slate-900 border border-slate-800 divide-y divide-slate-800/70 p-2"></div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button id="btnCancelBatchModal" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold">建立批次並更新卡牌成本</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 4: GRADE RETURN / SCORE ENTRY ==================== -->
+  <div id="modalGradeReturn" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-card rounded-2xl max-w-3xl w-full p-5 sm:p-6 border border-amber-500/30 shadow-2xl space-y-4 my-8">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 id="gradeReturnTitle" class="text-base font-bold text-white">🏆 登錄送評出分結果與加價 (Upcharge)</h3>
+          <p class="text-xs text-slate-400 mt-0.5">輸入每張卡的鑑定分數、認證編號 (Cert #)、高價卡加價及出分後最新預估市值</p>
+        </div>
+        <button id="btnCloseGradeReturnModal" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">✕</button>
+      </div>
+
+      <form id="formGradeReturn" class="space-y-4 text-xs">
+        <input type="hidden" id="returnBatchId" />
+        <div id="gradeReturnCardsList" class="space-y-3 max-h-96 overflow-y-auto pr-1"></div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <button id="btnCancelGradeReturnModal" type="button" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">完成出分並轉為「在庫鑑定磚」</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    // =========================================================================
+    // STATE MANAGEMENT & INITIAL DEMO DATA (Internal Base Currency: HKD)
+    // =========================================================================
+    const STORAGE_KEY = 'pokevault_pro_state_v1';
+
+    function getDefaultState() {
+      return {
+        displayCurrency: 'HKD', // 'HKD' or 'USD'
+        usdToHkdRate: 7.80,
+        startingCapitalHKD: 50000,
+        capitalTransactions: [
+          {
+            id: 'cap-1',
+            date: '2026-09-15',
+            type: 'DEPOSIT',
+            amountHKD: 10000,
+            note: '秋葉原與日本 Mercari 採購加碼備用金'
+          },
+          {
+            id: 'cap-2',
+            date: '2026-10-02',
+            type: 'EXPENSE',
+            amountHKD: 380,
+            note: '購買 Card Saver 1 半硬卡夾、PSA 專用卡套與防潮箱耗材'
+          }
+        ],
+        batches: [
+          {
+            id: 'BATCH-2026-01',
+            company: 'PSA',
+            tier: 'PSA Value Bulk (代送店)',
+            dateSent: '2026-09-20',
+            status: 'RETURNED', // PREPARING, SHIPPED, GRADING, GRADED, RETURNED
+            feePerCardHKD: 150,
+            totalShippingHKD: 120,
+            miscFeeHKD: 0
+          },
+          {
+            id: 'BATCH-2026-02',
+            company: 'BGS',
+            tier: 'BGS Standard (含 Subgrades)',
+            dateSent: '2026-10-18',
+            status: 'GRADING',
+            feePerCardHKD: 280,
+            totalShippingHKD: 160,
+            miscFeeHKD: 40
+          }
+        ],
+        cards: [
+          {
+            id: 'card-101',
+            name: 'Pikachu ex (皮卡丘 ex 超電突圍)',
+            setNum: 'SV8 132/106',
+            lang: 'JP',
+            rarity: 'SAR',
+            buyDate: '2026-10-20',
+            source: 'Mercari JP',
+            buyPriceHKD: 1950,
+            buyShippingHKD: 45,
+            status: 'RAW', // RAW, GRADING, GRADED, SOLD
+            batchId: '',
+            gradeCompany: '',
+            gradeScore: '',
+            certNum: '',
+            gradingCostHKD: 0,
+            upchargeHKD: 0,
+            marketValueHKD: 2350,
+            sellDate: '',
+            sellPlatform: '',
+            sellPriceHKD: 0,
+            sellFeeHKD: 0,
+            sellShippingHKD: 0,
+            notes: '四角完美、置中 50/50，準備下批送 PSA 衝 10 分'
+          },
+          {
+            id: 'card-102',
+            name: 'Charizard ex (噴火龍 ex 151)',
+            setNum: 'SV2a 201/165',
+            lang: 'JP',
+            rarity: 'SAR',
+            buyDate: '2026-09-12',
+            source: '日本卡鋪直購',
+            buyPriceHKD: 1180,
+            buyShippingHKD: 30,
+            status: 'SOLD',
+            batchId: 'BATCH-2026-01',
+            gradeCompany: 'PSA',
+            gradeScore: '10',
+            certNum: '92841102',
+            gradingCostHKD: 210,
+            upchargeHKD: 0,
+            marketValueHKD: 2650,
+            sellDate: '2026-10-25',
+            sellPlatform: 'eBay',
+            sellPriceHKD: 2730,
+            sellFeeHKD: 368.55,
+            sellShippingHKD: 45,
+            notes: 'PSA 10 Gem Mint 順利出分，於 eBay 以 US$350 售出'
+          },
+          {
+            id: 'card-103',
+            name: 'Gengar VMAX (耿鬼 VMAX 異畫)',
+            setNum: 'SGG 020/019',
+            lang: 'JP',
+            rarity: 'SA',
+            buyDate: '2026-09-14',
+            source: 'SNKRDUNK',
+            buyPriceHKD: 2600,
+            buyShippingHKD: 60,
+            status: 'GRADED',
+            batchId: 'BATCH-2026-01',
+            gradeCompany: 'PSA',
+            gradeScore: '10',
+            certNum: '92841103',
+            gradingCostHKD: 210,
+            upchargeHKD: 150,
+            marketValueHKD: 4850,
+            sellDate: '',
+            sellPlatform: '',
+            sellPriceHKD: 0,
+            sellFeeHKD: 0,
+            sellShippingHKD: 0,
+            notes: 'PSA 10 出分！因市值較高被收 HK$150 Upcharge，目前掛牌待售'
+          },
+          {
+            id: 'card-104',
+            name: 'Latias ex (拉帝亞斯 ex 樂園騰龍)',
+            setNum: 'SV7a 087/064',
+            lang: 'JP',
+            rarity: 'SAR',
+            buyDate: '2026-10-12',
+            source: 'Carousell 面交',
+            buyPriceHKD: 1350,
+            buyShippingHKD: 0,
+            status: 'GRADING',
+            batchId: 'BATCH-2026-02',
+            gradeCompany: 'BGS',
+            gradeScore: '',
+            certNum: '',
+            gradingCostHKD: 380,
+            upchargeHKD: 0,
+            marketValueHKD: 2900,
+            sellDate: '',
+            sellPlatform: '',
+            sellPriceHKD: 0,
+            sellFeeHKD: 0,
+            sellShippingHKD: 0,
+            notes: '表面極完美無印刷線，送 BGS 挑戰金標 10 / 黑標'
+          },
+          {
+            id: 'card-105',
+            name: 'Giratina V (騎拉帝納 V 迷失深淵)',
+            setNum: 'S11 111/100',
+            lang: 'JP',
+            rarity: 'SA',
+            buyDate: '2026-10-14',
+            source: 'Mercari JP',
+            buyPriceHKD: 2450,
+            buyShippingHKD: 50,
+            status: 'GRADING',
+            batchId: 'BATCH-2026-02',
+            gradeCompany: 'BGS',
+            gradeScore: '',
+            certNum: '',
+            gradingCostHKD: 380,
+            upchargeHKD: 0,
+            marketValueHKD: 4600,
+            sellDate: '',
+            sellPlatform: '',
+            sellPriceHKD: 0,
+            sellFeeHKD: 0,
+            sellShippingHKD: 0,
+            notes: '與拉帝亞斯同批送 BGS 鑑定中'
+          },
+          {
+            id: 'card-106',
+            name: 'Lillie Full Art (莉莉艾 繁中版 SR)',
+            setNum: 'AC1a 159/158',
+            lang: 'TC',
+            rarity: 'SR',
+            buyDate: '2026-10-05',
+            source: '香港卡展收購',
+            buyPriceHKD: 3200,
+            buyShippingHKD: 0,
+            status: 'SOLD',
+            batchId: '',
+            gradeCompany: '',
+            gradeScore: '',
+            certNum: '',
+            gradingCostHKD: 0,
+            upchargeHKD: 0,
+            marketValueHKD: 3850,
+            sellDate: '2026-10-19',
+            sellPlatform: 'Carousell / 面交',
+            sellPriceHKD: 3850,
+            sellFeeHKD: 0,
+            sellShippingHKD: 0,
+            notes: '背面微白點不適合送評，直接裸卡快炒賺取買賣差價'
+          }
+        ]
+      };
+    }
+
+    let state = loadState();
+    let chartCapitalInstance = null;
+    let chartStrategyInstance = null;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.cards)) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.warn('LocalStorage load fallback:', e);
+      }
+      return getDefaultState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn('LocalStorage save warning:', e);
+      }
+    }
+
+    // =========================================================================
+    // CURRENCY CONVERSION & FORMATTING HELPERS
+    // =========================================================================
+    function toDisplayAmount(amountHKD) {
+      const val = Number(amountHKD) || 0;
+      if (state.displayCurrency === 'USD') {
+        return val / (Number(state.usdToHkdRate) || 7.8);
+      }
+      return val;
+    }
+
+    function inputToHKD(inputAmount, inputCurrency) {
+      const val = Number(inputAmount) || 0;
+      if (inputCurrency === 'USD') {
+        return val * (Number(state.usdToHkdRate) || 7.8);
+      }
+      return val;
+    }
+
+    function formatMoney(amountHKD, showSign = false) {
+      const converted = toDisplayAmount(amountHKD);
+      const prefix = state.displayCurrency === 'USD' ? 'US$ ' : 'HK$ ';
+      const absVal = Math.abs(converted);
+      const decimals = state.displayCurrency === 'USD' ? 2 : 0;
+      const formatted = absVal.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+      if (showSign) {
+        if (converted > 0.004) return `+${prefix}${formatted}`;
+        if (converted < -0.004) return `-${prefix}${formatted}`;
+      } else if (converted < -0.004) {
+        return `-${prefix}${formatted}`;
+      }
+      return `${prefix}${formatted}`;
+    }
+
+    function formatDualMoney(amountHKD, showSign = false) {
+      const hkd = Number(amountHKD) || 0;
+      const usd = hkd / (Number(state.usdToHkdRate) || 7.8);
+      const sign = showSign && hkd > 0 ? '+' : (hkd < 0 ? '-' : '');
+      const absHkd = Math.abs(hkd).toLocaleString('en-US', { maximumFractionDigits: 0 });
+      const absUsd = Math.abs(usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return `${sign}HK$${absHkd} (${sign}US$${absUsd})`;
+    }
+
+    function getCardLandedCostHKD(card) {
+      return (Number(card.buyPriceHKD) || 0) +
+             (Number(card.buyShippingHKD) || 0) +
+             (Number(card.gradingCostHKD) || 0) +
+             (Number(card.upchargeHKD) || 0);
+    }
+
+    function getCardNetProfitHKD(card) {
+      const landed = getCardLandedCostHKD(card);
+      if (card.status === 'SOLD') {
+        const netSale = (Number(card.sellPriceHKD) || 0) - (Number(card.sellFeeHKD) || 0) - (Number(card.sellShippingHKD) || 0);
+        return netSale - landed;
+      }
+      return (Number(card.marketValueHKD) || landed) - landed;
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      const colorClass = type === 'error'
+        ? 'bg-rose-950/95 border-rose-500 text-rose-200'
+        : 'bg-slate-900/95 border-amber-400 text-white';
+      el.className = `px-4 py-2.5 rounded-xl border-l-4 shadow-xl text-xs font-semibold transition-all duration-300 ${colorClass}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+      }, 2800);
+    }
+
+    // =========================================================================
+    // FINANCIAL & CAPITAL METRICS ENGINE
+    // =========================================================================
+    function computeMetrics() {
+      const startingHKD = Number(state.startingCapitalHKD) || 0;
+      let netDepositsHKD = 0;
+      let manualExpensesHKD = 0;
+
+      state.capitalTransactions.forEach(tx => {
+        const amt = Number(tx.amountHKD) || 0;
+        if (tx.type === 'DEPOSIT') netDepositsHKD += amt;
+        if (tx.type === 'WITHDRAW') netDepositsHKD -= amt;
+        if (tx.type === 'EXPENSE') manualExpensesHKD += amt;
+      });
+
+      let totalAllCardBuyAndGradeOutflowHKD = 0;
+      let totalSoldNetInflowHKD = 0;
+
+      let rawCards = [];
+      let gradingCards = [];
+      let gradedCards = [];
+      let soldCards = [];
+
+      let rawCostHKD = 0;
+      let gradingCostHKD = 0;
+      let gradedCostHKD = 0;
+      let activeMarketValueHKD = 0;
+
+      let realizedProfitHKD = 0;
+      let realizedCostBasisHKD = 0;
+      let soldRevenueHKD = 0;
+
+      let rawFlipProfitHKD = 0;
+      let gradedFlipProfitHKD = 0;
+
+      state.cards.forEach(c => {
+        const landed = getCardLandedCostHKD(c);
+        totalAllCardBuyAndGradeOutflowHKD += landed;
+
+        if (c.status === 'RAW') {
+          rawCards.push(c);
+          rawCostHKD += landed;
+          activeMarketValueHKD += (Number(c.marketValueHKD) || landed);
+        } else if (c.status === 'GRADING') {
+          gradingCards.push(c);
+          gradingCostHKD += landed;
+          activeMarketValueHKD += (Number(c.marketValueHKD) || landed);
+        } else if (c.status === 'GRADED') {
+          gradedCards.push(c);
+          gradedCostHKD += landed;
+          activeMarketValueHKD += (Number(c.marketValueHKD) || landed);
+        } else if (c.status === 'SOLD') {
+          soldCards.push(c);
+          const gross = Number(c.sellPriceHKD) || 0;
+          const fee = Number(c.sellFeeHKD) || 0;
+          const ship = Number(c.sellShippingHKD) || 0;
+          const netPayout = gross - fee - ship;
+          const profit = netPayout - landed;
+
+          totalSoldNetInflowHKD += netPayout;
+          soldRevenueHKD += gross;
+          realizedProfitHKD += profit;
+          realizedCostBasisHKD += landed;
+
+          if (c.gradeCompany || (Number(c.gradingCostHKD) || 0) > 0) {
+            gradedFlipProfitHKD += profit;
+          } else {
+            rawFlipProfitHKD += profit;
+          }
+        }
+      });
+
+      const totalCapitalBaseHKD = startingHKD + netDepositsHKD;
+      const availableCashHKD = totalCapitalBaseHKD - manualExpensesHKD - totalAllCardBuyAndGradeOutflowHKD + totalSoldNetInflowHKD;
+      const activeInventoryCostHKD = rawCostHKD + gradingCostHKD + gradedCostHKD;
+      const unrealizedProfitHKD = activeMarketValueHKD - activeInventoryCostHKD;
+      const totalNetAssetValueHKD = availableCashHKD + activeMarketValueHKD;
+      const realizedROIPct = realizedCostBasisHKD > 0 ? (realizedProfitHKD / realizedCostBasisHKD) * 100 : 0;
+
+      return {
+        startingHKD,
+        totalCapitalBaseHKD,
+        availableCashHKD,
+        activeInventoryCostHKD,
+        activeMarketValueHKD,
+        unrealizedProfitHKD,
+        totalNetAssetValueHKD,
+        realizedProfitHKD,
+        realizedROIPct,
+        soldRevenueHKD,
+        rawCards,
+        gradingCards,
+        gradedCards,
+        soldCards,
+        rawCostHKD,
+        gradingCostHKD,
+        gradedCostHKD,
+        rawFlipProfitHKD,
+        gradedFlipProfitHKD,
+        manualExpensesHKD
+      };
+    }
+
+    // =========================================================================
+    // RENDER FUNCTIONS
+    // =========================================================================
+    function renderAll() {
+      // Update currency toggle buttons & labels
+      const isHKD = state.displayCurrency === 'HKD';
+      const btnHKD = document.getElementById('btnCurrHKD');
+      const btnUSD = document.getElementById('btnCurrUSD');
+
+      btnHKD.className = isHKD
+        ? 'px-3 py-1 text-xs font-bold rounded-md transition-all bg-amber-500 text-slate-950 shadow'
+        : 'px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-300 hover:text-white';
+      btnUSD.className = !isHKD
+        ? 'px-3 py-1 text-xs font-bold rounded-md transition-all bg-amber-500 text-slate-950 shadow'
+        : 'px-3 py-1 text-xs font-bold rounded-md transition-all text-slate-300 hover:text-white';
+
+      document.querySelectorAll('.curr-label').forEach(el => {
+        el.textContent = state.displayCurrency;
+      });
+
+      document.getElementById('globalRateInput').value = Number(state.usdToHkdRate).toFixed(2);
+
+      // Update starting capital inputs in current display currency
+      const dispStartCap = Math.round(toDisplayAmount(state.startingCapitalHKD) * 100) / 100;
+      document.getElementById('quickStartingCapitalInput').value = dispStartCap;
+      document.getElementById('ledgerStartingCapInput').value = dispStartCap;
+
+      const m = computeMetrics();
+
+      // Update badges & header
+      document.getElementById('badgeInventoryCount').textContent = state.cards.length;
+      document.getElementById('badgeGradingCount').textContent = m.gradingCards.length;
+      document.getElementById('headerCashAvailable').textContent = formatMoney(m.availableCashHKD);
+      document.getElementById('headerCashAvailable').className = m.availableCashHKD >= 0 ? 'font-bold text-emerald-400' : 'font-bold text-rose-400';
+
+      renderDashboard(m);
+      renderInventoryTable();
+      renderGradingBatches();
+      renderCalculator();
+      renderCapitalLedger(m);
+    }
+
+    function renderDashboard(m) {
+      document.getElementById('kpiTotalAsset').textContent = formatMoney(m.totalNetAssetValueHKD);
+      document.getElementById('kpiStartingCapSub').textContent = `總投入本金池: ${formatMoney(m.totalCapitalBaseHKD)}`;
+
+      const cashEl = document.getElementById('kpiAvailableCash');
+      cashEl.textContent = formatMoney(m.availableCashHKD);
+      cashEl.className = `text-xl sm:text-2xl font-extrabold mt-2 ${m.availableCashHKD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      const cashRatio = m.totalCapitalBaseHKD > 0 ? ((m.availableCashHKD / m.totalCapitalBaseHKD) * 100).toFixed(1) : '0.0';
+      document.getElementById('kpiCashRatioSub').textContent = `佔總本金比例: ${cashRatio}%`;
+
+      document.getElementById('kpiInventoryCost').textContent = formatMoney(m.activeInventoryCostHKD);
+      document.getElementById('kpiInventoryBreakdown').textContent =
+        `裸卡 ${m.rawCards.length} 張・送評中 ${m.gradingCards.length} 張・持磚 ${m.gradedCards.length} 張`;
+
+      document.getElementById('kpiMarketValue').textContent = formatMoney(m.activeMarketValueHKD);
+      const unrealEl = document.getElementById('kpiUnrealizedProfit');
+      unrealEl.textContent = `潛在未實現差價: ${formatMoney(m.unrealizedProfitHKD, true)}`;
+      unrealEl.className = `text-[11px] mt-1 ${m.unrealizedProfitHKD >= 0 ? 'text-purple-300' : 'text-rose-300'}`;
+
+      const realEl = document.getElementById('kpiRealizedProfit');
+      realEl.textContent = formatMoney(m.realizedProfitHKD, true);
+      realEl.className = `text-xl sm:text-2xl font-extrabold mt-2 ${m.realizedProfitHKD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      document.getElementById('kpiRealizedROI').textContent =
+        `平均已結算 ROI: ${m.realizedROIPct >= 0 ? '+' : ''}${m.realizedROIPct.toFixed(1)}% (${m.soldCards.length} 筆成交)`;
+
+      // Pipeline cards
+      document.getElementById('pipeRawCount').textContent = `${m.rawCards.length} 張`;
+      document.getElementById('pipeRawCost').textContent = `總成本: ${formatMoney(m.rawCostHKD)}`;
+      document.getElementById('pipeGradingCount').textContent = `${m.gradingCards.length} 張`;
+      document.getElementById('pipeGradingCost').textContent = `含評費成本: ${formatMoney(m.gradingCostHKD)}`;
+      document.getElementById('pipeGradedCount').textContent = `${m.gradedCards.length} 張`;
+      document.getElementById('pipeGradedCost').textContent = `總落地成本: ${formatMoney(m.gradedCostHKD)}`;
+      document.getElementById('pipeSoldCount').textContent = `${m.soldCards.length} 張`;
+      document.getElementById('pipeSoldRevenue').textContent = `總銷售額: ${formatMoney(m.soldRevenueHKD)}`;
+
+      // Recent Table
+      const tbody = document.getElementById('dashboardRecentTableBody');
+      tbody.innerHTML = '';
+      const recentCards = [...state.cards].slice(0, 6);
+      recentCards.forEach(c => {
+        const landed = getCardLandedCostHKD(c);
+        const profit = getCardNetProfitHKD(c);
+        const roi = landed > 0 ? (profit / landed) * 100 : 0;
+        const extraFees = (Number(c.buyShippingHKD) || 0) + (Number(c.gradingCostHKD) || 0) + (Number(c.upchargeHKD) || 0);
+        const targetVal = c.status === 'SOLD' ? c.sellPriceHKD : (c.marketValueHKD || landed);
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+        tr.innerHTML = `
+          <td class="py-2.5 px-3">
+            <div class="font-bold text-white">${escapeHtml(c.name)}</div>
+            <div class="text-[11px] text-slate-400">${escapeHtml(c.setNum)} · ${escapeHtml(c.lang)} · ${escapeHtml(c.rarity)}</div>
+          </td>
+          <td class="py-2.5 px-3">${renderStatusBadge(c)}</td>
+          <td class="py-2.5 px-3 text-right text-slate-300">${formatMoney(c.buyPriceHKD)}</td>
+          <td class="py-2.5 px-3 text-right text-blue-300">${formatMoney(extraFees)}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-white">${formatMoney(landed)}</td>
+          <td class="py-2.5 px-3 text-right text-slate-200">${formatMoney(targetVal)}</td>
+          <td class="py-2.5 px-3 text-right font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            ${formatMoney(profit, true)} <span class="text-[10px] opacity-80">(${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%)</span>
+          </td>
+          <td class="py-2.5 px-3 text-center">
+            <div class="inline-flex items-center gap-1">
+              ${c.status !== 'SOLD' ? `<button type="button" data-sell-card="${c.id}" class="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-semibold">售出</button>` : ''}
+              <button type="button" data-edit-card="${c.id}" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">編輯</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      renderCharts(m);
+    }
+
+    function renderCharts(m) {
+      if (typeof Chart === 'undefined') return;
+
+      const ctxCap = document.getElementById('chartCapitalAllocation');
+      const capData = [
+        Math.max(0, toDisplayAmount(m.availableCashHKD)),
+        toDisplayAmount(m.rawCostHKD),
+        toDisplayAmount(m.gradingCostHKD),
+        toDisplayAmount(m.gradedCostHKD)
+      ];
+
+      if (chartCapitalInstance) chartCapitalInstance.destroy();
+      chartCapitalInstance = new Chart(ctxCap, {
+        type: 'doughnut',
+        data: {
+          labels: ['可用現金', '在庫裸卡成本', '送評中卡牌成本', '在庫鑑定磚成本'],
+          datasets: [{
+            data: capData,
+            backgroundColor: ['#10b981', '#64748b', '#3b82f6', '#f59e0b'],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#cbd5e1', font: { size: 11 }, padding: 12 }
+            }
+          },
+          cutout: '64%'
+        }
+      });
+
+      const ctxStrat = document.getElementById('chartStrategyPerformance');
+      if (chartStrategyInstance) chartStrategyInstance.destroy();
+      chartStrategyInstance = new Chart(ctxStrat, {
+        type: 'bar',
+        data: {
+          labels: ['裸卡快炒已實現淨利', '送評賣出已實現淨利', '在庫潛在未實現差價'],
+          datasets: [{
+            label: `金額 (${state.displayCurrency})`,
+            data: [
+              toDisplayAmount(m.rawFlipProfitHKD),
+              toDisplayAmount(m.gradedFlipProfitHKD),
+              toDisplayAmount(m.unrealizedProfitHKD)
+            ],
+            backgroundColor: ['#38bdf8', '#f59e0b', '#a855f7'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(148, 163, 184, 0.1)' } }
+          }
+        }
+      });
+    }
+
+    function renderStatusBadge(c) {
+      if (c.status === 'RAW') {
+        return `<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-200 border border-slate-700">在庫裸卡 Raw</span>`;
+      }
+      if (c.status === 'GRADING') {
+        return `<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">送評中 (${escapeHtml(c.gradeCompany || 'PSA')})</span>`;
+      }
+      if (c.status === 'GRADED') {
+        return `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">${escapeHtml(c.gradeCompany || 'PSA')} ${escapeHtml(c.gradeScore || '10')}</span>`;
+      }
+      if (c.status === 'SOLD') {
+        const sub = c.gradeCompany ? `${escapeHtml(c.gradeCompany)} ${escapeHtml(c.gradeScore)}` : 'Raw';
+        return `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">已售出 (${sub})</span>`;
+      }
+      return '';
+    }
+
+    function renderInventoryTable() {
+      const search = (document.getElementById('invSearchInput').value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('invStatusFilter').value;
+      const langFilter = document.getElementById('invLangFilter').value;
+      const companyFilter = document.getElementById('invCompanyFilter').value;
+
+      const filtered = state.cards.filter(c => {
+        if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
+        if (langFilter !== 'ALL' && c.lang !== langFilter) return false;
+        if (companyFilter !== 'ALL') {
+          if (companyFilter === 'NONE' && c.gradeCompany) return false;
+          if (companyFilter !== 'NONE' && c.gradeCompany !== companyFilter) return false;
+        }
+        if (search) {
+          const hay = `${c.name} ${c.setNum} ${c.certNum} ${c.notes} ${c.source}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      });
+
+      const tbody = document.getElementById('inventoryTableBody');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="py-8 text-center text-slate-500">沒有符合篩選條件的卡牌記錄</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(c => {
+        const buyAndShip = (Number(c.buyPriceHKD) || 0) + (Number(c.buyShippingHKD) || 0);
+        const gradeAndUpcharge = (Number(c.gradingCostHKD) || 0) + (Number(c.upchargeHKD) || 0);
+        const landed = getCardLandedCostHKD(c);
+        const targetVal = c.status === 'SOLD' ? c.sellPriceHKD : (c.marketValueHKD || landed);
+        const sellFees = c.status === 'SOLD' ? ((Number(c.sellFeeHKD) || 0) + (Number(c.sellShippingHKD) || 0)) : 0;
+        const profit = getCardNetProfitHKD(c);
+        const roi = landed > 0 ? (profit / landed) * 100 : 0;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/50 transition';
+        tr.innerHTML = `
+          <td class="py-3 px-3 text-center">
+            ${c.status === 'RAW'
+              ? `<input type="checkbox" class="raw-card-check rounded bg-slate-800 border-slate-600 text-amber-500" value="${c.id}" />`
+              : `<span class="text-slate-600">—</span>`}
+          </td>
+          <td class="py-3 px-3">
+            <div class="font-bold text-white">${escapeHtml(c.name)}</div>
+            <div class="text-[11px] text-slate-400">${escapeHtml(c.setNum)} · 入手: ${escapeHtml(c.source || '-')} (${escapeHtml(c.buyDate || '-')})</div>
+            ${c.notes ? `<div class="text-[11px] text-amber-300/80 mt-0.5">💡 ${escapeHtml(c.notes)}</div>` : ''}
+          </td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 font-semibold">${escapeHtml(c.lang)}</span>
+            <span class="ml-1 text-slate-400">${escapeHtml(c.rarity)}</span>
+          </td>
+          <td class="py-3 px-3">
+            <div>${renderStatusBadge(c)}</div>
+            ${c.certNum ? `<div class="text-[10px] text-slate-400 mt-1">Cert #${escapeHtml(c.certNum)}</div>` : ''}
+          </td>
+          <td class="py-3 px-3 text-right">
+            <div class="text-white font-semibold">${formatMoney(buyAndShip)}</div>
+            <div class="text-[10px] text-slate-400">原價 ${formatMoney(c.buyPriceHKD)}</div>
+          </td>
+          <td class="py-3 px-3 text-right">
+            <div class="text-blue-300 font-semibold">${formatMoney(gradeAndUpcharge)}</div>
+            ${(Number(c.upchargeHKD) || 0) > 0 ? `<div class="text-[10px] text-amber-400">含加價 ${formatMoney(c.upchargeHKD)}</div>` : ''}
+          </td>
+          <td class="py-3 px-3 text-right font-extrabold text-white">${formatMoney(landed)}</td>
+          <td class="py-3 px-3 text-right">
+            <div class="font-bold ${c.status === 'SOLD' ? 'text-emerald-300' : 'text-purple-300'}">${formatMoney(targetVal)}</div>
+            <div class="text-[10px] text-slate-400">${c.status === 'SOLD' ? escapeHtml(c.sellPlatform) : '預估市值'}</div>
+          </td>
+          <td class="py-3 px-3 text-right text-slate-400">
+            ${c.status === 'SOLD' ? formatMoney(sellFees) : '—'}
+          </td>
+          <td class="py-3 px-3 text-right">
+            <div class="font-extrabold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatMoney(profit, true)}</div>
+            <div class="text-[10px] ${roi >= 0 ? 'text-emerald-300' : 'text-rose-300'}">${c.status === 'SOLD' ? '已實現' : '預估'} ROI ${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%</div>
+          </td>
+          <td class="py-3 px-3 text-center">
+            <div class="inline-flex items-center gap-1">
+              ${c.status !== 'SOLD'
+                ? `<button type="button" data-sell-card="${c.id}" class="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition">售出</button>`
+                : ''}
+              <button type="button" data-edit-card="${c.id}" class="px-2 py-1 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 transition">編輯</button>
+              <button type="button" data-delete-card="${c.id}" class="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-300 hover:bg-rose-500/30 transition">刪除</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderGradingBatches() {
+      const container = document.getElementById('gradingBatchesContainer');
+      container.innerHTML = '';
+
+      if (state.batches.length === 0) {
+        container.innerHTML = `<div class="glass-card rounded-2xl p-8 text-center text-slate-400 text-sm">目前尚無送評批次記錄，點擊右上角「+ 建立新送評批次」開始追蹤。</div>`;
+        return;
+      }
+
+      const statusSteps = [
+        { key: 'PREPARING', label: '1. 準備中' },
+        { key: 'SHIPPED', label: '2. 已寄出' },
+        { key: 'GRADING', label: '3. 鑑定中' },
+        { key: 'GRADED', label: '4. 已出分' },
+        { key: 'RETURNED', label: '5. 已寄回在庫' }
+      ];
+
+      state.batches.forEach(batch => {
+        const batchCards = state.cards.filter(c => c.batchId === batch.id);
+        const cardCount = batchCards.length;
+        const sharedPerCardHKD = cardCount > 0
+          ? ((Number(batch.totalShippingHKD) || 0) + (Number(batch.miscFeeHKD) || 0)) / cardCount
+          : 0;
+        const totalCostPerCardHKD = (Number(batch.feePerCardHKD) || 0) + sharedPerCardHKD;
+        const totalBatchGradingSpendHKD = batchCards.reduce((acc, c) => acc + (Number(c.gradingCostHKD) || 0) + (Number(c.upchargeHKD) || 0), 0);
+
+        const cardEl = document.createElement('div');
+        cardEl.className = 'glass-card rounded-2xl p-5 border border-slate-800 space-y-4';
+
+        const stepPills = statusSteps.map(s => {
+          const active = batch.status === s.key;
+          return `<button type="button" data-batch-status="${batch.id}" data-step="${s.key}"
+            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+              active
+                ? 'bg-blue-500 text-white shadow'
+                : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+            }">${s.label}</button>`;
+        }).join('');
+
+        const rowsHtml = batchCards.map(c => {
+          const landed = getCardLandedCostHKD(c);
+          return `
+            <tr class="border-b border-slate-800/60">
+              <td class="py-2 px-3 font-semibold text-white">${escapeHtml(c.name)} <span class="text-slate-400 font-normal">(${escapeHtml(c.setNum)})</span></td>
+              <td class="py-2 px-3">${renderStatusBadge(c)}</td>
+              <td class="py-2 px-3 text-right">${formatMoney((Number(c.buyPriceHKD) || 0) + (Number(c.buyShippingHKD) || 0))}</td>
+              <td class="py-2 px-3 text-right text-blue-300">${formatMoney(c.gradingCostHKD)}</td>
+              <td class="py-2 px-3 text-right text-amber-300">${formatMoney(c.upchargeHKD)}</td>
+              <td class="py-2 px-3 text-right font-bold text-white">${formatMoney(landed)}</td>
+              <td class="py-2 px-3 text-right text-purple-300 font-semibold">${formatMoney(c.marketValueHKD || landed)}</td>
+            </tr>
+          `;
+        }).join('');
+
+        cardEl.innerHTML = `
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-extrabold">${escapeHtml(batch.company)}</span>
+                <h3 class="text-sm font-bold text-white">${escapeHtml(batch.id)} — ${escapeHtml(batch.tier)}</h3>
+                <span class="text-xs text-slate-400">送出日: ${escapeHtml(batch.dateSent)}</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                本批共 <strong class="text-white">${cardCount}</strong> 張卡 ｜ 每張基本評費 ${formatMoney(batch.feePerCardHKD)} + 分攤運費/雜費 ${formatMoney(sharedPerCardHKD)} = 每張平均送評成本 <strong class="text-blue-300">${formatMoney(totalCostPerCardHKD)}</strong> ｜ 整批總鑑定支出: <strong class="text-amber-300">${formatMoney(totalBatchGradingSpendHKD)}</strong>
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" data-open-return="${batch.id}"
+                class="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition">
+                🏆 登錄出分結果 / 加價 (Upcharge)
+              </button>
+              <button type="button" data-delete-batch="${batch.id}"
+                class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition">
+                刪除批次
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-xs text-slate-400 mr-1">點擊切換進度：</span>
+            ${stepPills}
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-800">
+                  <th class="py-2 px-3">卡牌名稱</th>
+                  <th class="py-2 px-3">目前狀態 / 分數</th>
+                  <th class="py-2 px-3 text-right">裸卡購入成本</th>
+                  <th class="py-2 px-3 text-right">分攤送評費</th>
+                  <th class="py-2 px-3 text-right">加價 Upcharge</th>
+                  <th class="py-2 px-3 text-right">總落地成本</th>
+                  <th class="py-2 px-3 text-right">最新預估市值</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml || `<tr><td colspan="7" class="py-4 text-center text-slate-500">此批次尚無關聯卡牌</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        `;
+        container.appendChild(cardEl);
+      });
+    }
+
+    function renderCalculator() {
+      const calcCurr = document.getElementById('calcCurrency').value;
+      const buyPrice = inputToHKD(document.getElementById('calcBuyPrice').value, calcCurr);
+      const buyShip = inputToHKD(document.getElementById('calcBuyShipping').value, calcCurr);
+      const gradeFee = inputToHKD(document.getElementById('calcGradeFee').value, calcCurr);
+      const gradeShip = inputToHKD(document.getElementById('calcGradeShip').value, calcCurr);
+      const upcharge = inputToHKD(document.getElementById('calcUpcharge').value, calcCurr);
+
+      const rawSell = inputToHKD(document.getElementById('calcRawSellPrice').value, calcCurr);
+      const feePct = (Number(document.getElementById('calcFeePct').value) || 0) / 100;
+      const sellShip = inputToHKD(document.getElementById('calcSellShip').value, calcCurr);
+
+      const price10 = inputToHKD(document.getElementById('calcPrice10').value, calcCurr);
+      const price9 = inputToHKD(document.getElementById('calcPrice9').value, calcCurr);
+      const price8 = inputToHKD(document.getElementById('calcPrice8').value, calcCurr);
+
+      const prob10 = (Number(document.getElementById('calcProb10').value) || 0) / 100;
+      const prob9 = (Number(document.getElementById('calcProb9').value) || 0) / 100;
+      const prob8 = (Number(document.getElementById('calcProb8').value) || 0) / 100;
+
+      const rawCostHKD = buyPrice + buyShip;
+      const gradedCostHKD = rawCostHKD + gradeFee + gradeShip + upcharge;
+
+      // Net payouts
+      const netRawSell = rawSell * (1 - feePct) - sellShip;
+      const profitRawFlip = netRawSell - rawCostHKD;
+
+      const net10 = price10 * (1 - feePct) - sellShip;
+      const profit10 = net10 - gradedCostHKD;
+
+      const net9 = price9 * (1 - feePct) - sellShip;
+      const profit9 = net9 - gradedCostHKD;
+
+      const net8 = price8 * (1 - feePct) - sellShip;
+      const profit8 = net8 - gradedCostHKD;
+
+      const expectedGradedProfitHKD = (prob10 * profit10) + (prob9 * profit9) + (prob8 * profit8);
+      const expectedROIPct = gradedCostHKD > 0 ? (expectedGradedProfitHKD / gradedCostHKD) * 100 : 0;
+
+      // Breakeven gross price after grading: gross * (1 - feePct) - sellShip = gradedCostHKD
+      const breakevenGrossHKD = (1 - feePct) > 0 ? (gradedCostHKD + sellShip) / (1 - feePct) : gradedCostHKD;
+
+      // Minimum Gem 10 rate so that p*profit10 + (1-p)*profit9 >= profitRawFlip
+      let minGemRate = 0;
+      if (profit10 > profit9) {
+        minGemRate = ((profitRawFlip - profit9) / (profit10 - profit9)) * 100;
+        minGemRate = Math.max(0, Math.min(100, minGemRate));
+      }
+
+      document.getElementById('calcResRawCost').textContent = formatMoney(rawCostHKD);
+      document.getElementById('calcResGradedCost').textContent = formatMoney(gradedCostHKD);
+      document.getElementById('calcResBreakeven').textContent = formatMoney(breakevenGrossHKD);
+      document.getElementById('calcResRawFlipProfit').textContent = formatMoney(profitRawFlip, true);
+      document.getElementById('calcResGem10Profit').textContent = formatMoney(profit10, true);
+      document.getElementById('calcResMinGemRate').textContent = `${minGemRate.toFixed(1)}%`;
+
+      document.getElementById('calcExpectedProfitDisplay').textContent = formatMoney(expectedGradedProfitHKD, true);
+      document.getElementById('calcExpectedROIDisplay').textContent = `期望 ROI: ${expectedROIPct >= 0 ? '+' : ''}${expectedROIPct.toFixed(1)}%`;
+
+      const banner = document.getElementById('calcDecisionBanner');
+      const tag = document.getElementById('calcRecommendationTag');
+      const title = document.getElementById('calcDecisionTitle');
+
+      if (expectedGradedProfitHKD > profitRawFlip && expectedGradedProfitHKD > 0) {
+        banner.className = 'glass-card rounded-2xl p-5 border-l-4 border-l-emerald-400';
+        tag.className = 'text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
+        tag.textContent = '✅ 建議策略：買入送評增值 (Grade & Sell)';
+        title.textContent = `送評期望淨利比裸卡直賣多賺 ${formatMoney(expectedGradedProfitHKD - profitRawFlip)}`;
+      } else if (profitRawFlip > 0 && profitRawFlip >= expectedGradedProfitHKD) {
+        banner.className = 'glass-card rounded-2xl p-5 border-l-4 border-l-amber-400';
+        tag.className = 'text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300';
+        tag.textContent = '⚡ 建議策略：裸卡直接轉賣賺差價 (Raw Flip)';
+        title.textContent = `送評風險較高，裸卡快炒可直接獲利 ${formatMoney(profitRawFlip, true)} 且免等待送評週期`;
+      } else {
+        banner.className = 'glass-card rounded-2xl p-5 border-l-4 border-l-rose-500';
+        tag.className = 'text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300';
+        tag.textContent = '⚠️ 風險警示：期望值為負 (Pass / 議價買入)';
+        title.textContent = '目前買入價或評費過高，建議壓低買入成本後再出手';
+      }
+
+      const scenarios = [
+        { name: '⚡ 裸卡直接賣出 (Raw Flip)', cost: rawCostHKD, gross: rawSell, fee: rawSell * feePct + sellShip, net: netRawSell, profit: profitRawFlip },
+        { name: '🏆 鑑定 10分 (Gem Mint 10)', cost: gradedCostHKD, gross: price10, fee: price10 * feePct + sellShip, net: net10, profit: profit10 },
+        { name: '🥈 鑑定 9分 (Mint 9)', cost: gradedCostHKD, gross: price9, fee: price9 * feePct + sellShip, net: net9, profit: profit9 },
+        { name: '⚠️ 鑑定 8分或以下 (NM 8)', cost: gradedCostHKD, gross: price8, fee: price8 * feePct + sellShip, net: net8, profit: profit8 }
+      ];
+
+      const tbody = document.getElementById('calcScenarioTableBody');
+      tbody.innerHTML = scenarios.map(s => {
+        const roi = s.cost > 0 ? (s.profit / s.cost) * 100 : 0;
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <td class="py-2.5 px-2 font-bold text-white">${s.name}</td>
+            <td class="py-2.5 px-2 text-right text-slate-300">${formatMoney(s.cost)}</td>
+            <td class="py-2.5 px-2 text-right text-white font-semibold">${formatMoney(s.gross)}</td>
+            <td class="py-2.5 px-2 text-right text-rose-300">-${formatMoney(s.fee)}</td>
+            <td class="py-2.5 px-2 text-right font-bold text-slate-200">${formatMoney(s.net)}</td>
+            <td class="py-2.5 px-2 text-right font-extrabold ${s.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatDualMoney(s.profit, true)}</td>
+            <td class="py-2.5 px-2 text-right font-bold ${roi >= 0 ? 'text-emerald-300' : 'text-rose-300'}">${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderCapitalLedger(m) {
+      const tbody = document.getElementById('capitalLedgerTableBody');
+      const entries = [];
+
+      // 1. Starting Capital
+      entries.push({
+        date: '2026-09-01',
+        typeBadge: '<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">起始本金</span>',
+        desc: '系統初始設定營運本金池 (Starting Capital)',
+        amountHKD: m.startingHKD,
+        deletableId: null
+      });
+
+      // 2. Manual Capital Transactions
+      state.capitalTransactions.forEach(tx => {
+        const isPos = tx.type === 'DEPOSIT';
+        const badge = tx.type === 'DEPOSIT'
+          ? '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">手動注資</span>'
+          : (tx.type === 'WITHDRAW'
+              ? '<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">資金提領</span>'
+              : '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">耗材/雜費</span>');
+        entries.push({
+          date: tx.date || '2026-10-01',
+          typeBadge: badge,
+          desc: tx.note,
+          amountHKD: isPos ? Number(tx.amountHKD) : -Number(tx.amountHKD),
+          deletableId: tx.id
+        });
+      });
+
+      // 3. Card Purchases & Grading Outflows + Sales Inflows
+      state.cards.forEach(c => {
+        const buyOut = (Number(c.buyPriceHKD) || 0) + (Number(c.buyShippingHKD) || 0);
+        entries.push({
+          date: c.buyDate || '2026-10-01',
+          typeBadge: '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">買入卡牌</span>',
+          desc: `購入 ${c.name} (${c.setNum})`,
+          amountHKD: -buyOut,
+          deletableId: null
+        });
+
+        const gradeOut = (Number(c.gradingCostHKD) || 0) + (Number(c.upchargeHKD) || 0);
+        if (gradeOut > 0) {
+          entries.push({
+            date: c.buyDate || '2026-10-05',
+            typeBadge: '<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">送評與加價</span>',
+            desc: `${c.gradeCompany || '鑑定'} 送評成本 — ${c.name}`,
+            amountHKD: -gradeOut,
+            deletableId: null
+          });
+        }
+
+        if (c.status === 'SOLD') {
+          const netIn = (Number(c.sellPriceHKD) || 0) - (Number(c.sellFeeHKD) || 0) - (Number(c.sellShippingHKD) || 0);
+          entries.push({
+            date: c.sellDate || '2026-10-25',
+            typeBadge: '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">售卡回款</span>',
+            desc: `售出 ${c.name} (${c.sellPlatform || '直接交易'} 扣除手續費後實收)`,
+            amountHKD: netIn,
+            deletableId: null
+          });
+        }
+      });
+
+      entries.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+      tbody.innerHTML = entries.map(e => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="py-2.5 px-3 text-slate-400 whitespace-nowrap">${escapeHtml(e.date)}</td>
+          <td class="py-2.5 px-3 whitespace-nowrap">${e.typeBadge}</td>
+          <td class="py-2.5 px-3 text-white">${escapeHtml(e.desc)}</td>
+          <td class="py-2.5 px-3 text-right font-bold ${e.amountHKD >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            ${formatMoney(e.amountHKD, true)}
+          </td>
+          <td class="py-2.5 px-3 text-center">
+            ${e.deletableId
+              ? `<button type="button" data-del-cap-tx="${e.deletableId}" class="text-rose-400 hover:underline">刪除</button>`
+              : '<span class="text-slate-600">自動連動</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // =========================================================================
+    // INTERACTION & EVENT LISTENERS
+    // =========================================================================
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        const isMatch = btn.getAttribute('data-tab') === tabName;
+        btn.className = isMatch
+          ? 'nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 bg-slate-800 text-amber-400 border border-amber-500/30'
+          : 'nav-tab px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-300 hover:bg-slate-800/60';
+      });
+      renderAll();
+    }
+
+    function openCardModal(cardId = null) {
+      const modal = document.getElementById('modalCard');
+      const title = document.getElementById('modalCardTitle');
+      const curr = state.displayCurrency;
+      document.getElementById('cardInputCurr').value = curr;
+
+      if (cardId) {
+        const c = state.cards.find(x => x.id === cardId);
+        if (!c) return;
+        title.textContent = `編輯卡牌：${c.name}`;
+        document.getElementById('cardId').value = c.id;
+        document.getElementById('cardName').value = c.name;
+        document.getElementById('cardSetNum').value = c.setNum;
+        document.getElementById('cardLang').value = c.lang;
+        document.getElementById('cardRarity').value = c.rarity;
+        document.getElementById('cardBuyDate').value = c.buyDate;
+        document.getElementById('cardSource').value = c.source;
+        document.getElementById('cardBuyPrice').value = Math.round(toDisplayAmount(c.buyPriceHKD) * 100) / 100;
+        document.getElementById('cardBuyShipping').value = Math.round(toDisplayAmount(c.buyShippingHKD) * 100) / 100;
+        document.getElementById('cardMarketValue').value = Math.round(toDisplayAmount(c.marketValueHKD) * 100) / 100;
+        document.getElementById('cardStatus').value = c.status;
+        document.getElementById('cardGradeCompany').value = c.gradeCompany || '';
+        document.getElementById('cardGradeScore').value = c.gradeScore || '';
+        document.getElementById('cardCertNum').value = c.certNum || '';
+        document.getElementById('cardGradingCost').value = Math.round(toDisplayAmount(c.gradingCostHKD) * 100) / 100;
+        document.getElementById('cardUpcharge').value = Math.round(toDisplayAmount(c.upchargeHKD) * 100) / 100;
+        document.getElementById('cardNotes').value = c.notes || '';
+      } else {
+        title.textContent = '新增買入卡牌';
+        document.getElementById('formCard').reset();
+        document.getElementById('cardId').value = '';
+        document.getElementById('cardInputCurr').value = curr;
+        document.getElementById('cardBuyDate').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('cardRarity').value = 'SAR';
+        document.getElementById('cardBuyShipping').value = '0';
+        document.getElementById('cardGradingCost').value = '0';
+        document.getElementById('cardUpcharge').value = '0';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function openSellModal(cardId) {
+      const c = state.cards.find(x => x.id === cardId);
+      if (!c) return;
+      document.getElementById('sellCardId').value = c.id;
+      document.getElementById('sellCardSubtitle').textContent = `${c.name} (${c.setNum}) ${c.gradeCompany ? `— ${c.gradeCompany} ${c.gradeScore}` : '— 裸卡 Raw'}`;
+      const landedHKD = getCardLandedCostHKD(c);
+      document.getElementById('sellModalLandedCost').textContent = formatDualMoney(landedHKD);
+      document.getElementById('sellInputCurr').value = state.displayCurrency;
+      document.getElementById('sellDate').value = new Date().toISOString().slice(0, 10);
+      const suggestedVal = c.marketValueHKD || landedHKD * 1.3;
+      document.getElementById('sellGrossPrice').value = Math.round(toDisplayAmount(suggestedVal) * 100) / 100;
+      document.getElementById('sellPlatform').value = 'Carousell / 面交';
+      document.getElementById('sellFeePct').value = '0';
+      document.getElementById('sellFeeAmt').value = '0';
+      document.getElementById('sellShipCost').value = '0';
+
+      updateSellModalPreview();
+      document.getElementById('modalSell').classList.remove('hidden');
+    }
+
+    function updateSellModalPreview() {
+      const cardId = document.getElementById('sellCardId').value;
+      const c = state.cards.find(x => x.id === cardId);
+      if (!c) return;
+      const curr = document.getElementById('sellInputCurr').value;
+      const grossHKD = inputToHKD(document.getElementById('sellGrossPrice').value, curr);
+      const feeHKD = inputToHKD(document.getElementById('sellFeeAmt').value, curr);
+      const shipHKD = inputToHKD(document.getElementById('sellShipCost').value, curr);
+      const netPayoutHKD = grossHKD - feeHKD - shipHKD;
+      const landedHKD = getCardLandedCostHKD(c);
+      const profitHKD = netPayoutHKD - landedHKD;
+      const roi = landedHKD > 0 ? (profitHKD / landedHKD) * 100 : 0;
+
+      document.getElementById('sellPreviewNetPayout').textContent = formatDualMoney(netPayoutHKD);
+      const profitEl = document.getElementById('sellPreviewNetProfit');
+      profitEl.textContent = `${formatDualMoney(profitHKD, true)} (${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%)`;
+      profitEl.className = `font-extrabold ${profitHKD >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+
+    function openBatchModal() {
+      const checkedIds = Array.from(document.querySelectorAll('.raw-card-check:checked')).map(el => el.value);
+      const rawCards = state.cards.filter(c => c.status === 'RAW');
+
+      document.getElementById('batchDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('batchCurr').value = state.displayCurrency;
+      document.getElementById('batchFeePerCard').value = state.displayCurrency === 'USD' ? '19.5' : '150';
+      document.getElementById('batchTotalShipping').value = state.displayCurrency === 'USD' ? '15' : '120';
+      document.getElementById('batchMiscFee').value = '0';
+
+      const listEl = document.getElementById('batchRawCardsChecklist');
+      if (rawCards.length === 0) {
+        listEl.innerHTML = `<div class="p-4 text-center text-slate-400">目前沒有狀態為「在庫裸卡 (Raw)」的卡牌可供送評。請先新增裸卡。</div>`;
+      } else {
+        listEl.innerHTML = rawCards.map(c => {
+          const isChecked = checkedIds.includes(c.id) || checkedIds.length === 0;
+          return `
+            <label class="flex items-center justify-between p-2 hover:bg-slate-800/60 rounded-lg cursor-pointer">
+              <div class="flex items-center gap-2.5">
+                <input type="checkbox" class="batch-modal-card-chk rounded bg-slate-800 border-slate-600 text-blue-500" value="${c.id}" ${isChecked ? 'checked' : ''} />
+                <div>
+                  <div class="font-bold text-white">${escapeHtml(c.name)} <span class="text-slate-400 font-normal">(${escapeHtml(c.setNum)})</span></div>
+                  <div class="text-[10px] text-slate-400">購入成本: ${formatMoney((Number(c.buyPriceHKD) || 0) + (Number(c.buyShippingHKD) || 0))}</div>
+                </div>
+              </div>
+              <span class="text-[11px] text-amber-300">${escapeHtml(c.rarity)}</span>
+            </label>
+          `;
+        }).join('');
+      }
+
+      updateBatchSelectedCount();
+      document.getElementById('modalBatch').classList.remove('hidden');
+    }
+
+    function updateBatchSelectedCount() {
+      const count = document.querySelectorAll('.batch-modal-card-chk:checked').length;
+      document.getElementById('batchSelectedCountText').textContent = `已選 ${count} 張`;
+    }
+
+    function openGradeReturnModal(batchId) {
+      const batch = state.batches.find(b => b.id === batchId);
+      if (!batch) return;
+      const batchCards = state.cards.filter(c => c.batchId === batchId);
+      document.getElementById('returnBatchId').value = batchId;
+      document.getElementById('gradeReturnTitle').textContent = `🏆 登錄出分結果：${batch.id} (${batch.company})`;
+
+      const listEl = document.getElementById('gradeReturnCardsList');
+      listEl.innerHTML = batchCards.map(c => `
+        <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white">${escapeHtml(c.name)} (${escapeHtml(c.setNum)})</span>
+            <span class="text-[11px] text-slate-400">原購入+基本評費: ${formatMoney((Number(c.buyPriceHKD) || 0) + (Number(c.buyShippingHKD) || 0) + (Number(c.gradingCostHKD) || 0))}</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">${escapeHtml(batch.company)} 評級分數 *</label>
+              <input type="text" data-ret-score="${c.id}" value="${escapeHtml(c.gradeScore || '10')}" required
+                class="w-full bg-slate-800 border border-amber-500/40 rounded-lg px-2.5 py-1.5 font-bold text-amber-300" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">認證編號 (Cert #)</label>
+              <input type="text" data-ret-cert="${c.id}" value="${escapeHtml(c.certNum || '')}" placeholder="選填"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">高價加價 Upcharge (${state.displayCurrency})</label>
+              <input type="number" step="0.01" min="0" data-ret-upcharge="${c.id}" value="${Math.round(toDisplayAmount(c.upchargeHKD) * 100) / 100}"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">出分後新市值 (${state.displayCurrency})</label>
+              <input type="number" step="0.01" min="0" data-ret-mv="${c.id}" value="${Math.round(toDisplayAmount(c.marketValueHKD) * 100) / 100}"
+                class="w-full bg-slate-800 border border-purple-500/40 rounded-lg px-2.5 py-1.5 font-bold text-purple-300" />
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('modalGradeReturn').classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // INIT & BINDINGS
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('capTxDate').value = new Date().toISOString().slice(0, 10);
+
+      // Currency Switchers
+      document.getElementById('btnCurrHKD').addEventListener('click', () => {
+        state.displayCurrency = 'HKD';
+        saveState();
+        renderAll();
+        showToast('已切換為 港幣 (HKD $) 顯示');
+      });
+
+      document.getElementById('btnCurrUSD').addEventListener('click', () => {
+        state.displayCurrency = 'USD';
+        saveState();
+        renderAll();
+        showToast('已切換為 美元 (USD $) 顯示');
+      });
+
+      document.getElementById('globalRateInput').addEventListener('change', (e) => {
+        const val = parseFloat(e.target.value);
+        if (val > 0) {
+          state.usdToHkdRate = val;
+          saveState();
+          renderAll();
+          showToast(`匯率已更新為 1 USD = ${val.toFixed(2)} HKD`);
+        }
+      });
+
+      // Tab Switching
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+      });
+
+      document.querySelectorAll('[data-goto-tab]').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-goto-tab')));
+      });
+
+      // Starting Capital Updates
+      document.getElementById('btnSaveStartingCapital').addEventListener('click', () => {
+        const val = parseFloat(document.getElementById('quickStartingCapitalInput').value) || 0;
+        state.startingCapitalHKD = inputToHKD(val, state.displayCurrency);
+        saveState();
+        renderAll();
+        showToast('起始營運資金已更新！');
+      });
+
+      document.getElementById('btnLedgerSaveStartingCap').addEventListener('click', () => {
+        const val = parseFloat(document.getElementById('ledgerStartingCapInput').value) || 0;
+        state.startingCapitalHKD = inputToHKD(val, state.displayCurrency);
+        saveState();
+        renderAll();
+        showToast('起始營運資金已儲存！');
+      });
+
+      document.getElementById('btnQuickCapitalModal').addEventListener('click', () => {
+        switchTab('capital');
+      });
+
+      // Add Card Buttons
+      document.getElementById('btnTopAddCard').addEventListener('click', () => openCardModal(null));
+      document.getElementById('btnInvAddCard').addEventListener('click', () => openCardModal(null));
+      document.getElementById('btnCloseCardModal').addEventListener('click', () => document.getElementById('modalCard').classList.add('hidden'));
+      document.getElementById('btnCancelCardModal').addEventListener('click', () => document.getElementById('modalCard').classList.add('hidden'));
+
+      // Save Card Form
+      document.getElementById('formCard').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('cardId').value;
+        const curr = document.getElementById('cardInputCurr').value;
+        const buyPriceHKD = inputToHKD(document.getElementById('cardBuyPrice').value, curr);
+        const buyShippingHKD = inputToHKD(document.getElementById('cardBuyShipping').value, curr);
+        const gradingCostHKD = inputToHKD(document.getElementById('cardGradingCost').value, curr);
+        const upchargeHKD = inputToHKD(document.getElementById('cardUpcharge').value, curr);
+        const rawMv = document.getElementById('cardMarketValue').value;
+        const defaultMvHKD = buyPriceHKD + buyShippingHKD + gradingCostHKD + upchargeHKD;
+        const marketValueHKD = rawMv !== '' ? inputToHKD(rawMv, curr) : defaultMvHKD;
+
+        if (id) {
+          const idx = state.cards.findIndex(x => x.id === id);
+          if (idx > -1) {
+            state.cards[idx] = {
+              ...state.cards[idx],
+              name: document.getElementById('cardName').value.trim(),
+              setNum: document.getElementById('cardSetNum').value.trim(),
+              lang: document.getElementById('cardLang').value,
+              rarity: document.getElementById('cardRarity').value.trim(),
+              buyDate: document.getElementById('cardBuyDate').value,
+              source: document.getElementById('cardSource').value.trim(),
+              buyPriceHKD,
+              buyShippingHKD,
+              marketValueHKD,
+              status: document.getElementById('cardStatus').value,
+              gradeCompany: document.getElementById('cardGradeCompany').value,
+              gradeScore: document.getElementById('cardGradeScore').value.trim(),
+              certNum: document.getElementById('cardCertNum').value.trim(),
+              gradingCostHKD,
+              upchargeHKD,
+              notes: document.getElementById('cardNotes').value.trim()
+            };
+          }
+          showToast('卡牌資料已更新！');
+        } else {
+          const newCard = {
+            id: 'card-' + Date.now(),
+            name: document.getElementById('cardName').value.trim(),
+            setNum: document.getElementById('cardSetNum').value.trim(),
+            lang: document.getElementById('cardLang').value,
+            rarity: document.getElementById('cardRarity').value.trim(),
+            buyDate: document.getElementById('cardBuyDate').value,
+            source: document.getElementById('cardSource').value.trim(),
+            buyPriceHKD,
+            buyShippingHKD,
+            marketValueHKD,
+            status: document.getElementById('cardStatus').value,
+            batchId: '',
+            gradeCompany: document.getElementById('cardGradeCompany').value,
+            gradeScore: document.getElementById('cardGradeScore').value.trim(),
+            certNum: document.getElementById('cardCertNum').value.trim(),
+            gradingCostHKD,
+            upchargeHKD,
+            sellDate: '',
+            sellPlatform: '',
+            sellPriceHKD: 0,
+            sellFeeHKD: 0,
+            sellShippingHKD: 0,
+            notes: document.getElementById('cardNotes').value.trim()
+          };
+          state.cards.unshift(newCard);
+          showToast('新卡牌已入庫並扣除相應現金流！');
+        }
+
+        saveState();
+        document.getElementById('modalCard').classList.add('hidden');
+        renderAll();
+      });
+
+      // Inventory Filters & Select All
+      ['invSearchInput', 'invStatusFilter', 'invLangFilter', 'invCompanyFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderInventoryTable);
+        document.getElementById(id).addEventListener('change', renderInventoryTable);
+      });
+
+      document.getElementById('chkSelectAllRaw').addEventListener('change', (e) => {
+        document.querySelectorAll('.raw-card-check').forEach(chk => {
+          chk.checked = e.target.checked;
+        });
+      });
+
+      // Sell Modal Controls
+      document.getElementById('btnCloseSellModal').addEventListener('click', () => document.getElementById('modalSell').classList.add('hidden'));
+      document.getElementById('btnCancelSellModal').addEventListener('click', () => document.getElementById('modalSell').classList.add('hidden'));
+
+      document.getElementById('sellPlatform').addEventListener('change', (e) => {
+        const opt = e.target.selectedOptions[0];
+        const feePct = parseFloat(opt.getAttribute('data-fee')) || 0;
+        document.getElementById('sellFeePct').value = feePct;
+        const gross = parseFloat(document.getElementById('sellGrossPrice').value) || 0;
+        document.getElementById('sellFeeAmt').value = Math.round(gross * (feePct / 100) * 100) / 100;
+        updateSellModalPreview();
+      });
+
+      ['sellGrossPrice', 'sellFeePct'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const gross = parseFloat(document.getElementById('sellGrossPrice').value) || 0;
+          const pct = parseFloat(document.getElementById('sellFeePct').value) || 0;
+          document.getElementById('sellFeeAmt').value = Math.round(gross * (pct / 100) * 100) / 100;
+          updateSellModalPreview();
+        });
+      });
+
+      ['sellFeeAmt', 'sellShipCost', 'sellInputCurr'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateSellModalPreview);
+        document.getElementById(id).addEventListener('change', updateSellModalPreview);
+      });
+
+      document.getElementById('formSell').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const cardId = document.getElementById('sellCardId').value;
+        const c = state.cards.find(x => x.id === cardId);
+        if (!c) return;
+        const curr = document.getElementById('sellInputCurr').value;
+        c.status = 'SOLD';
+        c.sellDate = document.getElementById('sellDate').value;
+        c.sellPlatform = document.getElementById('sellPlatform').value;
+        c.sellPriceHKD = inputToHKD(document.getElementById('sellGrossPrice').value, curr);
+        c.sellFeeHKD = inputToHKD(document.getElementById('sellFeeAmt').value, curr);
+        c.sellShippingHKD = inputToHKD(document.getElementById('sellShipCost').value, curr);
+
+        saveState();
+        document.getElementById('modalSell').classList.add('hidden');
+        renderAll();
+        showToast(`已結算售出「${c.name}」，銷售回款已自動計入可用現金！`);
+      });
+
+      // Batch Modal Controls
+      document.getElementById('btnInvCreateBatch').addEventListener('click', openBatchModal);
+      document.getElementById('btnOpenBatchModal').addEventListener('click', openBatchModal);
+      document.getElementById('btnCloseBatchModal').addEventListener('click', () => document.getElementById('modalBatch').classList.add('hidden'));
+      document.getElementById('btnCancelBatchModal').addEventListener('click', () => document.getElementById('modalBatch').classList.add('hidden'));
+
+      document.getElementById('batchRawCardsChecklist').addEventListener('change', updateBatchSelectedCount);
+
+      document.getElementById('formBatch').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const selectedIds = Array.from(document.querySelectorAll('.batch-modal-card-chk:checked')).map(el => el.value);
+        if (selectedIds.length === 0) {
+          showToast('請至少勾選 1 張在庫裸卡建立送評批次', 'error');
+          return;
+        }
+        const curr = document.getElementById('batchCurr').value;
+        const company = document.getElementById('batchCompany').value;
+        const tier = document.getElementById('batchTier').value.trim();
+        const dateSent = document.getElementById('batchDate').value;
+        const feePerCardHKD = inputToHKD(document.getElementById('batchFeePerCard').value, curr);
+        const totalShippingHKD = inputToHKD(document.getElementById('batchTotalShipping').value, curr);
+        const miscFeeHKD = inputToHKD(document.getElementById('batchMiscFee').value, curr);
+
+        const batchId = `BATCH-${new Date().getFullYear()}-${String(state.batches.length + 1).padStart(2, '0')}`;
+        state.batches.unshift({
+          id: batchId,
+          company,
+          tier,
+          dateSent,
+          status: 'SHIPPED',
+          feePerCardHKD,
+          totalShippingHKD,
+          miscFeeHKD
+        });
+
+        const sharedPerCardHKD = (totalShippingHKD + miscFeeHKD) / selectedIds.length;
+        selectedIds.forEach(cid => {
+          const card = state.cards.find(x => x.id === cid);
+          if (card) {
+            card.status = 'GRADING';
+            card.batchId = batchId;
+            card.gradeCompany = company;
+            card.gradingCostHKD = feePerCardHKD + sharedPerCardHKD;
+          }
+        });
+
+        saveState();
+        document.getElementById('modalBatch').classList.add('hidden');
+        switchTab('grading');
+        showToast(`已建立送評批次 ${batchId}，並自動分攤運費至 ${selectedIds.length} 張卡牌！`);
+      });
+
+      // Grade Return Modal
+      document.getElementById('btnCloseGradeReturnModal').addEventListener('click', () => document.getElementById('modalGradeReturn').classList.add('hidden'));
+      document.getElementById('btnCancelGradeReturnModal').addEventListener('click', () => document.getElementById('modalGradeReturn').classList.add('hidden'));
+
+      document.getElementById('formGradeReturn').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const batchId = document.getElementById('returnBatchId').value;
+        const batch = state.batches.find(b => b.id === batchId);
+        if (batch) batch.status = 'RETURNED';
+
+        const curr = state.displayCurrency;
+        const batchCards = state.cards.filter(c => c.batchId === batchId);
+        batchCards.forEach(c => {
+          const scoreEl = document.querySelector(`[data-ret-score="${c.id}"]`);
+          const certEl = document.querySelector(`[data-ret-cert="${c.id}"]`);
+          const upEl = document.querySelector(`[data-ret-upcharge="${c.id}"]`);
+          const mvEl = document.querySelector(`[data-ret-mv="${c.id}"]`);
+
+          if (scoreEl) c.gradeScore = scoreEl.value.trim();
+          if (certEl) c.certNum = certEl.value.trim();
+          if (upEl) c.upchargeHKD = inputToHKD(upEl.value, curr);
+          if (mvEl) c.marketValueHKD = inputToHKD(mvEl.value, curr);
+          if (c.status !== 'SOLD') c.status = 'GRADED';
+        });
+
+        saveState();
+        document.getElementById('modalGradeReturn').classList.add('hidden');
+        renderAll();
+        showToast(`批次 ${batchId} 出分結果與加價已更新，卡牌已轉為「在庫鑑定磚」！`);
+      });
+
+      // Calculator bindings
+      document.querySelectorAll('.calc-input').forEach(el => {
+        el.addEventListener('input', renderCalculator);
+      });
+      document.getElementById('calcCurrency').addEventListener('change', renderCalculator);
+      document.getElementById('calcPlatformPreset').addEventListener('change', (e) => {
+        if (e.target.value !== 'custom') {
+          document.getElementById('calcFeePct').value = e.target.value;
+          renderCalculator();
+        }
+      });
+      document.getElementById('calcGradingPreset').addEventListener('change', (e) => {
+        const hkdVal = parseFloat(e.target.value) || 150;
+        const calcCurr = document.getElementById('calcCurrency').value;
+        const converted = calcCurr === 'USD' ? (hkdVal / state.usdToHkdRate).toFixed(1) : hkdVal;
+        document.getElementById('calcGradeFee').value = converted;
+        renderCalculator();
+      });
+
+      // Capital Transaction Form
+      document.getElementById('formAddCapitalTx').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const type = document.getElementById('capTxType').value;
+        const date = document.getElementById('capTxDate').value;
+        const curr = document.getElementById('capTxCurr').value;
+        const amountHKD = inputToHKD(document.getElementById('capTxAmount').value, curr);
+        const note = document.getElementById('capTxNote').value.trim();
+
+        state.capitalTransactions.unshift({
+          id: 'cap-' + Date.now(),
+          date,
+          type,
+          amountHKD,
+          note
+        });
+        saveState();
+        document.getElementById('capTxAmount').value = '';
+        document.getElementById('capTxNote').value = '';
+        renderAll();
+        showToast('資金變動記錄已新增！');
+      });
+
+      // Export CSV / JSON / Import / Reset
+      document.getElementById('btnExportCSV').addEventListener('click', () => {
+        const headers = ['ID', '卡牌名稱', '系列卡號', '語言', '稀有度', '狀態', '買入日期', '買入原價(HKD)', '買入運費(HKD)', '鑑定機構', '評級分數', 'Cert#', '送評費(HKD)', 'Upcharge加價(HKD)', '總落地成本(HKD)', '預估市值(HKD)', '售出日期', '銷售平台', '成交價(HKD)', '手續費(HKD)', '賣出運費(HKD)', '淨利潤(HKD)', '備註'];
+        const rows = state.cards.map(c => {
+          const landed = getCardLandedCostHKD(c);
+          const profit = getCardNetProfitHKD(c);
+          return [
+            c.id, c.name, c.setNum, c.lang, c.rarity, c.status, c.buyDate,
+            c.buyPriceHKD, c.buyShippingHKD, c.gradeCompany, c.gradeScore, c.certNum,
+            c.gradingCostHKD, c.upchargeHKD, landed, c.marketValueHKD,
+            c.sellDate, c.sellPlatform, c.sellPriceHKD, c.sellFeeHKD, c.sellShippingHKD,
+            profit, c.notes
+          ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+        });
+        const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PokeVault_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已匯出 CSV 報表！');
+      });
+
+      document.getElementById('btnExportJSON').addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PokeVault_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已匯出系統 JSON 備份檔！');
+      });
+
+      document.getElementById('inputImportJSON').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            if (imported && Array.isArray(imported.cards)) {
+              state = imported;
+              saveState();
+              renderAll();
+              showToast('成功匯入系統備份資料！');
+            } else {
+              showToast('備份檔格式不正確', 'error');
+            }
+          } catch (err) {
+            showToast('無法解析 JSON 檔案', 'error');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      document.getElementById('btnResetDemoData').addEventListener('click', () => {
+        state = getDefaultState();
+        saveState();
+        renderAll();
+        showToast('已重置為預設範例資料！');
+      });
+
+      // Delegated Click Actions (Edit/Sell/Delete Card, Batch Status, Delete Capital Tx)
+      document.body.addEventListener('click', (e) => {
+        const sellBtn = e.target.closest('[data-sell-card]');
+        if (sellBtn) {
+          openSellModal(sellBtn.getAttribute('data-sell-card'));
+          return;
+        }
+        const editBtn = e.target.closest('[data-edit-card]');
+        if (editBtn) {
+          openCardModal(editBtn.getAttribute('data-edit-card'));
+          return;
+        }
+        const delCardBtn = e.target.closest('[data-delete-card]');
+        if (delCardBtn) {
+          const cid = delCardBtn.getAttribute('data-delete-card');
+          state.cards = state.cards.filter(x => x.id !== cid);
+          saveState();
+          renderAll();
+          showToast('已刪除該張卡牌記錄');
+          return;
+        }
+        const batchStepBtn = e.target.closest('[data-batch-status]');
+        if (batchStepBtn) {
+          const bid = batchStepBtn.getAttribute('data-batch-status');
+          const step = batchStepBtn.getAttribute('data-step');
+          const batch = state.batches.find(b => b.id === bid);
+          if (batch) {
+            batch.status = step;
+            saveState();
+            renderAll();
+            showToast(`批次 ${bid} 狀態已更新為「${step}」`);
+          }
+          return;
+        }
+        const openRetBtn = e.target.closest('[data-open-return]');
+        if (openRetBtn) {
+          openGradeReturnModal(openRetBtn.getAttribute('data-open-return'));
+          return;
+        }
+        const delBatchBtn = e.target.closest('[data-delete-batch]');
+        if (delBatchBtn) {
+          const bid = delBatchBtn.getAttribute('data-delete-batch');
+          state.batches = state.batches.filter(b => b.id !== bid);
+          state.cards.forEach(c => {
+            if (c.batchId === bid) {
+              c.batchId = '';
+              if (c.status === 'GRADING') c.status = 'RAW';
+            }
+          });
+          saveState();
+          renderAll();
+          showToast(`已刪除批次 ${bid}`);
+          return;
+        }
+        const delCapBtn = e.target.closest('[data-del-cap-tx]');
+        if (delCapBtn) {
+          const txId = delCapBtn.getAttribute('data-del-cap-tx');
+          state.capitalTransactions = state.capitalTransactions.filter(t => t.id !== txId);
+          saveState();
+          renderAll();
+          showToast('已刪除該筆手動資金記錄');
+        }
+      });
+
+      // Initial Render
+      renderAll();
+    });
+  </script>
+</body>
+</html>
