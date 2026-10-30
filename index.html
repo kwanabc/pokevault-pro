@@ -41,6 +41,56 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-amber-500 selection:text-slate-950">
 
+  <!-- PIN 鎖定畫面：若已設定密碼，這段程式會在一開始就蓋住整個畫面 -->
+  <div id="pvPinOverlay" class="fixed inset-0 z-[70] bg-slate-950/95 backdrop-blur-md hidden flex-col items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 sm:p-8 shadow-2xl border border-amber-500/30 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 text-slate-950 flex items-center justify-center mx-auto mb-4 text-2xl">🔒</div>
+      <h2 class="text-lg font-extrabold text-white mb-1">PokéVault Pro 已鎖定</h2>
+      <p class="text-xs text-slate-400 mb-6">只供本人使用・請輸入個人密碼解鎖</p>
+      <form id="pvUnlockForm" class="space-y-4">
+        <div>
+          <input id="pvUnlockInput" type="password" autocomplete="off" placeholder="輸入個人密碼 / PIN"
+            class="w-full px-4 py-3 text-center text-lg tracking-widest rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <p id="pvUnlockError" class="text-xs text-rose-400 mt-2 hidden">密碼不正確，請再試一次。</p>
+        </div>
+        <button type="submit" class="w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition">解鎖進入系統</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('pokevault_pro_pin_v1')) {
+          var o = document.getElementById('pvPinOverlay');
+          if (o) { o.classList.remove('hidden'); o.classList.add('flex'); }
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- PIN 設定視窗 -->
+  <div id="pvPinSetupModal" class="fixed inset-0 z-[75] hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 border border-slate-700 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">🔒 個人密碼鎖設定</h3>
+        <button id="pvClosePinModal" type="button" class="text-slate-400 hover:text-white px-2 py-1">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">這是「螢幕鎖」，用來防止別人隨手看到你的成本與售價（不是加密，資料本身仍存在這台電腦的瀏覽器裡）。</p>
+      <div class="space-y-3">
+        <input id="pvNewPin" type="password" autocomplete="off" placeholder="輸入新密碼 / PIN（至少 4 個字）"
+          class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        <input id="pvConfirmPin" type="password" autocomplete="off" placeholder="再輸入一次確認"
+          class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        <p id="pvPinSetupError" class="text-xs text-rose-400 hidden"></p>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+        <button id="pvRemovePinBtn" type="button" class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 text-xs font-semibold transition">移除密碼鎖</button>
+        <button id="pvCancelPinBtn" type="button" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">取消</button>
+        <button id="pvSavePinBtn" type="button" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">啟用密碼鎖</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Top Navigation & Global Controls -->
   <header class="sticky top-0 z-30 glass-card border-b border-slate-800/80 px-4 py-3">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
@@ -90,6 +140,16 @@
           class="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-lg shadow-md shadow-amber-500/10 transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
           <span>新增入庫卡牌</span>
+        </button>
+
+        <!-- PIN 密碼鎖 -->
+        <button id="pvPinBtn" type="button" title="設定開啟這個網站所需的密碼"
+          class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+          🔒 <span id="pvPinLabel">設定密碼鎖</span>
+        </button>
+        <button id="pvLockNowBtn" type="button"
+          class="hidden items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+          立即鎖定
         </button>
       </div>
     </div>
@@ -1323,6 +1383,10 @@
     function saveState() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        // 通知雲端同步模組：本機資料有變更（同步模組會自動上傳）
+        if (!window.__hermesApplyingRemote && window.HermesSync) {
+          window.HermesSync.markLocalChange();
+        }
       } catch (e) {
         console.warn('LocalStorage save warning:', e);
       }
@@ -2735,6 +2799,404 @@
       // Initial Render
       renderAll();
     });
+
+    // ===== 雲端同步：把本 App 的資料存取能力交給同步模組 =====
+    window.HermesSyncRuntime = {
+      storageKey: STORAGE_KEY,
+      appLabel: 'PokéVault Pro',
+      getState: () => state,
+      setState: (v) => { state = v; },
+      save: saveState,
+      render: renderAll,
+      toast: (m) => { try { showToast(m); } catch (e) {} },
+      validate: (d) => !!d && Array.isArray(d.cards)
+    };
+  </script>
+
+  <!-- ================= 🔒 密碼鎖（螢幕鎖） ================= -->
+  <script>
+  (function () {
+    'use strict';
+    const PIN_KEY = 'pokevault_pro_pin_v1';
+    const $ = (id) => document.getElementById(id);
+    function getPin() { try { return localStorage.getItem(PIN_KEY) || ''; } catch (e) { return ''; } }
+    function setPin(v) { try { if (v) { localStorage.setItem(PIN_KEY, v); } else { localStorage.removeItem(PIN_KEY); } } catch (e) {} }
+    function showOverlay() {
+      const o = $('pvPinOverlay');
+      if (!o) return;
+      o.classList.remove('hidden');
+      o.classList.add('flex');
+      const i = $('pvUnlockInput');
+      if (i) { i.value = ''; setTimeout(() => i.focus(), 80); }
+      if ($('pvUnlockError')) $('pvUnlockError').classList.add('hidden');
+    }
+    function hideOverlay() {
+      const o = $('pvPinOverlay');
+      if (!o) return;
+      o.classList.add('hidden');
+      o.classList.remove('flex');
+    }
+    function updateUI() {
+      const has = !!getPin();
+      if ($('pvPinLabel')) $('pvPinLabel').textContent = has ? '更改密碼鎖' : '設定密碼鎖';
+      const l = $('pvLockNowBtn');
+      if (l) { l.classList.toggle('hidden', !has); l.classList.toggle('inline-flex', has); }
+    }
+    function openSetup() {
+      if ($('pvNewPin')) $('pvNewPin').value = '';
+      if ($('pvConfirmPin')) $('pvConfirmPin').value = '';
+      if ($('pvPinSetupError')) $('pvPinSetupError').classList.add('hidden');
+      const m = $('pvPinSetupModal');
+      if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+    }
+    function closeSetup() {
+      const m = $('pvPinSetupModal');
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    }
+    function setupError(msg) {
+      const e = $('pvPinSetupError');
+      if (e) { e.textContent = msg; e.classList.remove('hidden'); }
+    }
+    function toast(msg, type) { try { if (window.showToast) window.showToast(msg, type); } catch (e) {} }
+
+    window.PokeVaultPin = { lock: () => { if (getPin()) showOverlay(); }, hasPin: () => !!getPin() };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateUI();
+      if (getPin()) showOverlay();
+
+      if ($('pvPinBtn')) $('pvPinBtn').addEventListener('click', openSetup);
+      if ($('pvClosePinModal')) $('pvClosePinModal').addEventListener('click', closeSetup);
+      if ($('pvCancelPinBtn')) $('pvCancelPinBtn').addEventListener('click', closeSetup);
+
+      if ($('pvSavePinBtn')) $('pvSavePinBtn').addEventListener('click', () => {
+        const a = $('pvNewPin') ? $('pvNewPin').value.trim() : '';
+        const b = $('pvConfirmPin') ? $('pvConfirmPin').value.trim() : '';
+        if (a.length < 4) { setupError('密碼至少要 4 個字。'); return; }
+        if (a !== b) { setupError('兩次輸入的密碼不一樣，請再確認。'); return; }
+        setPin(a);
+        updateUI();
+        closeSetup();
+        toast('✅ 密碼鎖已啟用，下次打開網站要先解鎖');
+      });
+
+      if ($('pvRemovePinBtn')) $('pvRemovePinBtn').addEventListener('click', () => {
+        setPin('');
+        updateUI();
+        closeSetup();
+        hideOverlay();
+        toast('已移除密碼鎖');
+      });
+
+      if ($('pvLockNowBtn')) $('pvLockNowBtn').addEventListener('click', showOverlay);
+
+      if ($('pvUnlockForm')) $('pvUnlockForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const v = $('pvUnlockInput') ? $('pvUnlockInput').value : '';
+        if (v && v === getPin()) {
+          hideOverlay();
+          toast('歡迎回來，已解鎖 ✅');
+        } else if ($('pvUnlockError')) {
+          $('pvUnlockError').classList.remove('hidden');
+        }
+      });
+    });
+  })();
+  </script>
+
+  <!-- ================= ☁️ 雲端同步（讓不同電腦共用同一份資料） ================= -->
+  <button id="hsSyncBtn" type="button" title="雲端同步設定"
+    class="fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow-lg border border-slate-700 transition">
+    <span id="hsDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+    <span>☁️ 雲端同步</span>
+  </button>
+
+  <div id="hsSyncModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="w-full max-w-lg rounded-2xl bg-slate-900 text-slate-100 shadow-2xl border border-slate-700 p-5 space-y-4 my-8">
+      <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">☁️ 雲端同步設定</h3>
+          <p class="text-xs text-slate-400 mt-0.5">把你的資料同步到自己的 GitHub 私人資料庫，不同電腦就能共用同一份</p>
+        </div>
+        <button id="hsCloseBtn" type="button" class="text-slate-400 hover:text-white px-2 py-1">✕</button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-1">
+          <div class="font-semibold text-white">這是怎麼運作的？</div>
+          <p>你的資料會存到你自己的 GitHub <strong class="text-amber-300">私人</strong>資料庫（<span class="font-mono">kwanabc/finance-vault</span>，只有你登入 GitHub 才看得到，網站訪客看不到）。</p>
+          <p>在另一台電腦打開同一個網址 → 點左下角這顆 ☁️ → 貼上同一組授權碼 → 資料就會出現。</p>
+          <p class="text-amber-300">資料會離開這台電腦、經加密連線送到 GitHub。若你要求「任何資料都不上傳」，請改用「💰 資金帳本與備份」裡的手動備份檔。</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">GitHub 授權碼 (token) ＊必填</label>
+          <input id="hsToken" type="password" autocomplete="off" placeholder="github_pat_..........."
+            class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <p class="text-[11px] text-slate-500 mt-1">貼上一次就好，會存在這台電腦的瀏覽器裡（兩個網站共用同一組）。畫面上不會顯示完整內容。</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">資料庫名稱</label>
+            <input id="hsRepo" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-xs font-mono text-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">檔案名稱</label>
+            <input id="hsPath" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-xs font-mono text-white" />
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1">
+          <div class="flex justify-between gap-3"><span class="text-slate-500">狀態</span><span id="hsStatus" class="font-semibold text-slate-100 text-right">尚未設定</span></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">最後同步</span><span id="hsLastSync" class="text-slate-300">—</span></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">本機最後修改</span><span id="hsDirtyAt" class="text-slate-300">—</span></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">雲端版本時間</span><span id="hsRemoteAt" class="text-slate-300">—</span></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">這台電腦代號</span><span id="hsDevice" class="text-slate-300">—</span></div>
+          <div id="hsLog" class="pt-1.5 mt-1 border-t border-slate-800 text-[11px] text-slate-500 whitespace-pre-line"></div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button id="hsSaveSyncBtn" type="button" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">儲存並立即同步</button>
+          <button id="hsPushBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-600 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">上傳本機 → 雲端</button>
+          <button id="hsPullBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-600 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">下載雲端 → 本機</button>
+          <button id="hsRestoreBtn" type="button" class="hidden px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold transition">還原同步前的本機版本</button>
+          <button id="hsClearBtn" type="button" class="px-3.5 py-2 rounded-xl border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 text-xs font-semibold transition">清除這台電腦的授權碼</button>
+        </div>
+
+        <p class="text-[11px] text-slate-500">提醒：授權碼等於這本資料庫的鑰匙。不要貼給別人、不要放在雲端硬碟。若懷疑外洩，到 GitHub → Settings → Developer settings 把它刪除，再產生一組新的。</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* ================= ☁️ Hermes 雲端同步模組 v1（PokéVault Pro） ================= */
+  (function () {
+    'use strict';
+    const APP_ID = 'pokevault-pro';
+    const DEFAULT_REPO = 'kwanabc/finance-vault';
+    const DEFAULT_FILE = 'pokevault-pro.json';
+    const CFG_KEY = 'hermes_sync_cfg_v1_' + APP_ID;
+    const TOKEN_KEY = 'hermes_sync_token_v1';
+    const DEV_KEY = 'hermes_sync_device_v1';
+    const BACKUP_KEY = 'hermes_sync_prepull_backup_v1_' + APP_ID;
+
+    let remoteSha = null;
+    let pushTimer = null;
+    let lastFocusSync = 0;
+    let busy = false;
+    let lastMsg = null;
+    let lastTone = null;
+    let hadLocalAtLoad = false;
+
+    const $ = (id) => document.getElementById(id);
+    const rt = () => window.HermesSyncRuntime || null;
+
+    function readJson(k, fb) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch (e) { return fb; } }
+    function cfg() { return readJson(CFG_KEY, {}) || {}; }
+    function setCfg(p) { const c = Object.assign(cfg(), p); try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch (e) {} return c; }
+    function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+    function deviceId() {
+      let d = null;
+      try { d = localStorage.getItem(DEV_KEY); } catch (e) {}
+      if (!d) { d = '電腦-' + Math.random().toString(36).slice(2, 6).toUpperCase(); try { localStorage.setItem(DEV_KEY, d); } catch (e) {} }
+      return d;
+    }
+    function fmtTime(ts) { if (!ts) return '—'; const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('zh-TW', { hour12: false }); }
+    function toast(msg) { const r = rt(); if (r && typeof r.toast === 'function') { try { r.toast(msg); } catch (e) {} } }
+    function log(msg) {
+      const el = $('hsLog'); if (!el) return;
+      const t = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      el.textContent = ('• ' + t + ' ' + msg + '\n' + el.textContent).split('\n').slice(0, 5).join('\n');
+    }
+    function setDot(cls) { const d = $('hsDot'); if (d) d.className = 'w-2 h-2 rounded-full ' + cls; }
+    function renderStatus() {
+      const s = $('hsStatus'); if (!s) return;
+      if (lastMsg) { s.textContent = lastMsg; setDot(lastTone || 'bg-slate-400'); return; }
+      if (!getToken()) { s.textContent = '尚未輸入授權碼（不會同步）'; setDot('bg-amber-400'); }
+      else if (!cfg().lastSyncAt) { s.textContent = '已設定，尚未同步過'; setDot('bg-slate-400'); }
+      else { s.textContent = '待命中（有變更會自動上傳）'; setDot('bg-emerald-400'); }
+    }
+    function setStatus(msg, tone) { lastMsg = msg; lastTone = tone || null; renderStatus(); }
+
+    function b64ToUtf8(b) { return new TextDecoder().decode(Uint8Array.from(atob(String(b).replace(/\s/g, '')), (c) => c.charCodeAt(0))); }
+    function utf8ToB64(s) { const bytes = new TextEncoder().encode(s); let bin = ''; bytes.forEach((x) => { bin += String.fromCharCode(x); }); return btoa(bin); }
+
+    function errMsg(code, body) {
+      if (code === 401) return '授權碼無效或已過期（401）。請重新產生一組授權碼貼上。';
+      if (code === 403) return '授權碼權限不足（403）。請確認它有 Contents: Read and write 權限，且可存取這個資料庫。';
+      if (code === 404) return '找不到資料庫或檔案（404）。請確認資料庫名稱，以及授權碼有勾選該資料庫。';
+      if (code === 409 || code === 422) return '雲端檔案版本衝突（' + code + '）。請再按一次同步。';
+      return 'GitHub 回應錯誤（' + code + '）：' + String(body || '').replace(/\s+/g, ' ').slice(0, 160);
+    }
+    function repoName() { return (cfg().repo || DEFAULT_REPO).trim(); }
+    function fileName() { return (cfg().path || DEFAULT_FILE).trim(); }
+
+    async function ghGet() {
+      if (!getToken()) throw new Error('請先輸入 GitHub 授權碼');
+      const url = 'https://api.github.com/repos/' + repoName() + '/contents/' + encodeURIComponent(fileName()) + '?ref=main&ts=' + Date.now();
+      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + getToken(), Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+      if (r.status === 404) return { missing: true };
+      if (!r.ok) throw new Error(errMsg(r.status, await r.text()));
+      const j = await r.json();
+      remoteSha = j.sha;
+      let env = null;
+      try { env = JSON.parse(b64ToUtf8(j.content || '')); } catch (e) { env = null; }
+      return { sha: j.sha, envelope: env };
+    }
+
+    async function ghPut(env) {
+      const body = {
+        message: 'sync(' + APP_ID + '): ' + new Date().toLocaleString('zh-TW', { hour12: false }) + ' @ ' + deviceId(),
+        content: utf8ToB64(JSON.stringify(env, null, 2)),
+        branch: 'main'
+      };
+      if (remoteSha) body.sha = remoteSha;
+      const r = await fetch('https://api.github.com/repos/' + repoName() + '/contents/' + encodeURIComponent(fileName()), {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + getToken(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) throw new Error(errMsg(r.status, await r.text()));
+      const j = await r.json();
+      remoteSha = j && j.content ? j.content.sha : null;
+      return j;
+    }
+
+    async function doPush(reason) {
+      const r = rt(); if (!r) throw new Error('App 尚未就緒，請重新整理頁面');
+      const env = { app: APP_ID, version: 1, updatedAt: new Date().toISOString(), device: deviceId(), payload: r.getState() };
+      await ghPut(env);
+      setCfg({ lastPushedAt: env.updatedAt, lastSyncAt: new Date().toISOString(), dirtyAt: null, remoteUpdatedAt: env.updatedAt });
+      setStatus('✅ 已上傳到雲端（' + (reason || '手動') + '）', 'bg-emerald-400');
+      log('上傳成功 ' + fmtTime(env.updatedAt));
+    }
+
+    async function applyEnvelope(env, why) {
+      const r = rt(); if (!r) throw new Error('App 尚未就緒，請重新整理頁面');
+      if (!env || !env.payload || (r.validate && !r.validate(env.payload))) throw new Error('雲端檔案格式不符，為安全起見未套用');
+      try { localStorage.setItem(BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), payload: r.getState() })); } catch (e) {}
+      window.__hermesApplyingRemote = true;
+      try { r.setState(env.payload); r.save(); r.render(); } finally { window.__hermesApplyingRemote = false; }
+      setCfg({ lastPushedAt: env.updatedAt, lastSyncAt: new Date().toISOString(), dirtyAt: null, remoteUpdatedAt: env.updatedAt });
+      setStatus('✅ 已載入雲端資料（' + fmtTime(env.updatedAt) + '，來自 ' + (env.device || '其他電腦') + '）', 'bg-emerald-400');
+      log('下載並套用成功（' + (why || '') + '）');
+      toast('☁️ 已載入雲端最新資料');
+    }
+
+    async function autoSync() {
+      const c = cfg();
+      const res = await ghGet();
+      if (res.missing) { await doPush('首次建立雲端檔案'); return; }
+      const env = res.envelope;
+      if (!env || !env.payload) throw new Error('雲端檔案內容無法解析');
+      const dirtyAt = c.dirtyAt || null;
+      const freshLocal = !hadLocalAtLoad && !dirtyAt;
+      if (dirtyAt && (!env.updatedAt || dirtyAt >= env.updatedAt)) { await doPush('本機較新'); return; }
+      if (freshLocal || env.updatedAt !== c.lastPushedAt) { await applyEnvelope(env, '雲端較新'); return; }
+      setCfg({ lastSyncAt: new Date().toISOString(), remoteUpdatedAt: env.updatedAt });
+      setStatus('✅ 已是最新（兩邊相同）', 'bg-emerald-400');
+    }
+
+    async function syncNow(mode) {
+      if (busy) return;
+      if (!rt()) return;
+      if (!getToken()) { setStatus('尚未輸入授權碼，無法同步', 'bg-amber-400'); return; }
+      busy = true;
+      setStatus('同步中…', 'bg-blue-400');
+      try {
+        if (mode === 'push') { await doPush('手動上傳'); }
+        else if (mode === 'pull') { const res = await ghGet(); if (res.missing) { await doPush('雲端尚無檔案'); } else { await applyEnvelope(res.envelope, '手動下載'); } }
+        else { await autoSync(); }
+      } catch (e) {
+        setStatus('❌ ' + (e && e.message ? e.message : String(e)), 'bg-rose-500');
+        log('錯誤：' + (e && e.message ? e.message : String(e)));
+      } finally {
+        busy = false;
+        refreshModal();
+      }
+    }
+
+    function markLocalChange() {
+      if (window.__hermesApplyingRemote) return;
+      setCfg({ dirtyAt: new Date().toISOString() });
+      if (!getToken()) { renderStatus(); return; }
+      setStatus('本機有變更，準備自動上傳…', 'bg-blue-400');
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => { syncNow('push'); }, 2500);
+    }
+
+    function refreshModal() {
+      const c = cfg();
+      if ($('hsRepo')) $('hsRepo').value = c.repo || DEFAULT_REPO;
+      if ($('hsPath')) $('hsPath').value = c.path || DEFAULT_FILE;
+      const tokEl = $('hsToken');
+      if (tokEl && document.activeElement !== tokEl) tokEl.value = getToken() ? '••••••••••••••••（已儲存）' : '';
+      if ($('hsLastSync')) $('hsLastSync').textContent = fmtTime(c.lastSyncAt);
+      if ($('hsDirtyAt')) $('hsDirtyAt').textContent = fmtTime(c.dirtyAt);
+      if ($('hsRemoteAt')) $('hsRemoteAt').textContent = fmtTime(c.remoteUpdatedAt);
+      if ($('hsDevice')) $('hsDevice').textContent = deviceId();
+      let hasBackup = false;
+      try { hasBackup = !!localStorage.getItem(BACKUP_KEY); } catch (e) {}
+      if ($('hsRestoreBtn')) $('hsRestoreBtn').classList.toggle('hidden', !hasBackup);
+      renderStatus();
+    }
+
+    function openModal() { refreshModal(); const m = $('hsSyncModal'); if (m) { m.classList.remove('hidden'); m.classList.add('flex'); } }
+    function closeModal() { const m = $('hsSyncModal'); if (m) { m.classList.add('hidden'); m.classList.remove('flex'); } }
+
+    function saveSettingsFromForm() {
+      const raw = ($('hsToken') && $('hsToken').value ? $('hsToken').value : '').trim();
+      if (raw && raw.indexOf('••') !== 0) { try { localStorage.setItem(TOKEN_KEY, raw); } catch (e) {} }
+      setCfg({ repo: ($('hsRepo') && $('hsRepo').value ? $('hsRepo').value : DEFAULT_REPO).trim(), path: ($('hsPath') && $('hsPath').value ? $('hsPath').value : DEFAULT_FILE).trim() });
+      remoteSha = null;
+    }
+
+    function bindUI() {
+      if ($('hsSyncBtn')) $('hsSyncBtn').addEventListener('click', openModal);
+      if ($('hsCloseBtn')) $('hsCloseBtn').addEventListener('click', closeModal);
+      if ($('hsSyncModal')) $('hsSyncModal').addEventListener('click', (e) => { if (e.target === $('hsSyncModal')) closeModal(); });
+      if ($('hsToken')) $('hsToken').addEventListener('focus', () => { if ($('hsToken').value.indexOf('••') === 0) $('hsToken').value = ''; });
+      if ($('hsSaveSyncBtn')) $('hsSaveSyncBtn').addEventListener('click', () => { saveSettingsFromForm(); syncNow('auto'); });
+      if ($('hsPushBtn')) $('hsPushBtn').addEventListener('click', () => { saveSettingsFromForm(); syncNow('push'); });
+      if ($('hsPullBtn')) $('hsPullBtn').addEventListener('click', () => { saveSettingsFromForm(); syncNow('pull'); });
+      if ($('hsClearBtn')) $('hsClearBtn').addEventListener('click', () => {
+        try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+        setStatus('已清除這台電腦的授權碼', 'bg-amber-400');
+        log('授權碼已清除');
+        refreshModal();
+      });
+      if ($('hsRestoreBtn')) $('hsRestoreBtn').addEventListener('click', () => {
+        const b = readJson(BACKUP_KEY, null);
+        const r = rt();
+        if (!b || !b.payload || !r) { setStatus('沒有可還原的備份', 'bg-amber-400'); return; }
+        window.__hermesApplyingRemote = true;
+        try { r.setState(b.payload); r.save(); r.render(); } finally { window.__hermesApplyingRemote = false; }
+        setCfg({ dirtyAt: new Date().toISOString() });
+        setStatus('已還原同步前的本機版本（下次同步會上傳它）', 'bg-amber-400');
+        toast('已還原同步前的版本');
+      });
+    }
+
+    try { const r0 = rt(); hadLocalAtLoad = !!(r0 && localStorage.getItem(r0.storageKey) !== null); } catch (e) { hadLocalAtLoad = false; }
+
+    window.HermesSync = { markLocalChange: markLocalChange, syncNow: syncNow, open: openModal, push: () => syncNow('push'), pull: () => syncNow('pull') };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      bindUI();
+      refreshModal();
+      if (getToken()) { setTimeout(() => { syncNow('auto'); }, 700); }
+    });
+
+    // 切回這個分頁時，若沒有未上傳的變更，就檢查一次雲端有沒有新資料
+    window.addEventListener('focus', () => {
+      const now = Date.now();
+      if (now - lastFocusSync < 60000) return;
+      lastFocusSync = now;
+      if (!getToken() || cfg().dirtyAt || busy) return;
+      syncNow('auto');
+    });
+  })();
   </script>
 </body>
 </html>
