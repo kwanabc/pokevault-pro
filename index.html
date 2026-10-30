@@ -3026,12 +3026,42 @@
     function errMsg(code, body) {
       if (code === 401) return '授權碼無效或已過期（401）。請重新產生一組授權碼貼上。';
       if (code === 403) return '授權碼權限不足（403）。請確認它有 Contents: Read and write 權限，且可存取這個資料庫。';
-      if (code === 404) return '找不到資料庫或檔案（404）。請確認資料庫名稱，以及授權碼有勾選該資料庫。';
+      if (code === 404) return '授權碼看不到這個資料庫（404）——最常見原因：產生授權碼時沒有勾選 finance-vault。';
       if (code === 409 || code === 422) return '雲端檔案版本衝突（' + code + '）。請再按一次同步。';
       return 'GitHub 回應錯誤（' + code + '）：' + String(body || '').replace(/\s+/g, ' ').slice(0, 160);
     }
     function repoName() { return (cfg().repo || DEFAULT_REPO).trim(); }
     function fileName() { return (cfg().path || DEFAULT_FILE).trim(); }
+
+    // 同步失敗時自動檢查：這組授權碼屬於哪個帳號、看不看得到這個資料庫
+    async function diagnose() {
+      const out = [];
+      const hdr = { Authorization: 'Bearer ' + getToken(), Accept: 'application/vnd.github+json' };
+      try {
+        const ru = await fetch('https://api.github.com/user', { headers: hdr, cache: 'no-store' });
+        if (ru.ok) {
+          const u = await ru.json();
+          out.push('授權碼屬於 GitHub 帳號：' + u.login + (u.login === repoName().split('/')[0] ? '（正確）' : '（⚠️ 與資料庫擁有者不同）'));
+        } else {
+          out.push('授權碼無法讀取帳號資訊（HTTP ' + ru.status + '）→ 可能已過期或被刪除');
+        }
+      } catch (e) { out.push('無法連線到 GitHub，請檢查網路'); }
+      try {
+        const rr = await fetch('https://api.github.com/repos/' + repoName(), { headers: hdr, cache: 'no-store' });
+        if (rr.ok) {
+          const j = await rr.json();
+          const canPush = !!(j.permissions && j.permissions.push);
+          out.push('資料庫 ' + j.full_name + '：可見（' + (j.private ? '私人' : '公開') + '・' + (canPush ? '可寫入' : '只有讀取權') + '）');
+          if (!canPush) out.push('→ 授權碼的 Permissions → Contents 要改為 Read and write');
+        } else if (rr.status === 404) {
+          out.push('資料庫 ' + repoName() + '：這組授權碼看不到（HTTP 404）');
+          out.push('→ 到 GitHub 授權碼設定裡，Repository access 選「Only select repositories」並勾選 ' + repoName());
+        } else {
+          out.push('讀取資料庫資訊失敗（HTTP ' + rr.status + '）');
+        }
+      } catch (e) {}
+      return out;
+    }
 
     async function ghGet() {
       if (!getToken()) throw new Error('請先輸入 GitHub 授權碼');
@@ -3114,8 +3144,15 @@
         else if (mode === 'pull') { const res = await ghGet(); if (res.missing) { await doPush('雲端尚無檔案'); } else { await applyEnvelope(res.envelope, '手動下載'); } }
         else { await autoSync(); }
       } catch (e) {
-        setStatus('❌ ' + (e && e.message ? e.message : String(e)), 'bg-rose-500');
-        log('錯誤：' + (e && e.message ? e.message : String(e)));
+        const msg = (e && e.message ? e.message : String(e));
+        setStatus('❌ ' + msg, 'bg-rose-500');
+        log('錯誤：' + msg);
+        try {
+          const lines = await diagnose();
+          lines.forEach((l) => log(l));
+          const hint = lines.find((l) => l.indexOf('→') === 0);
+          if (hint) setStatus('❌ ' + msg + ' ｜ ' + hint.replace('→ ', ''), 'bg-rose-500');
+        } catch (e2) {}
       } finally {
         busy = false;
         refreshModal();
