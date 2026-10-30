@@ -2809,7 +2809,8 @@
       save: saveState,
       render: renderAll,
       toast: (m) => { try { showToast(m); } catch (e) {} },
-      validate: (d) => !!d && Array.isArray(d.cards)
+      validate: (d) => !!d && Array.isArray(d.cards),
+      isSample: (d) => { try { return JSON.stringify(d) === JSON.stringify(getDefaultState()); } catch (e) { return false; } }
     };
   </script>
 
@@ -3086,13 +3087,17 @@
 
     async function autoSync() {
       const c = cfg();
+      const r = rt();
       const res = await ghGet();
       if (res.missing) { await doPush('首次建立雲端檔案'); return; }
       const env = res.envelope;
       if (!env || !env.payload) throw new Error('雲端檔案內容無法解析');
       const dirtyAt = c.dirtyAt || null;
-      const freshLocal = !hadLocalAtLoad && !dirtyAt;
-      if (dirtyAt && (!env.updatedAt || dirtyAt >= env.updatedAt)) { await doPush('本機較新'); return; }
+      // 若本機目前只是「內建範例資料」，一律以雲端為準（避免在新電腦亂改後蓋掉雲端真實資料）
+      let isSampleLocal = false;
+      try { isSampleLocal = !!(r && typeof r.isSample === 'function' && r.getState && r.isSample(r.getState())); } catch (e) { isSampleLocal = false; }
+      const freshLocal = (!hadLocalAtLoad || isSampleLocal) && !dirtyAt;
+      if (dirtyAt && !isSampleLocal && (!env.updatedAt || dirtyAt >= env.updatedAt)) { await doPush('本機較新'); return; }
       if (freshLocal || env.updatedAt !== c.lastPushedAt) { await applyEnvelope(env, '雲端較新'); return; }
       setCfg({ lastSyncAt: new Date().toISOString(), remoteUpdatedAt: env.updatedAt });
       setStatus('✅ 已是最新（兩邊相同）', 'bg-emerald-400');
